@@ -21,6 +21,7 @@ import sys
 
 import numpy as np
 import pygame
+import pygame.gfxdraw
 
 from .config import PendulumConfig, TrainingConfig, VisualizationConfig
 from .environment import CartPendulumEnv
@@ -70,7 +71,7 @@ def run(
             action, _ = model.predict(obs, deterministic=True)
         else:
             # Randomly choose max-left or max-right force.
-            action = np.random.choice([-1.0, 1.0], size=(1,))
+            action = np.random.choice([-1, 1], size=(1,))
         # Apply no force
         # action = np.array([0.0])
 
@@ -121,15 +122,16 @@ def run(
             cy - v.cart_height // 2,
             v.cart_width,
             v.cart_height,
-            border_radius=v.track_rad  # Roundness
         )
+
+        # Draw Fill
         pygame.draw.rect(
             screen,
             v.node_fill_color,
             cart_rect,
             border_radius=v.cart_rad  # Roundness
         )
-        # Draw hollow rounded rectangle
+        # Draw hollow rounded rectangle (Outline)
         pygame.draw.rect(
             screen,
             v.fg_color,
@@ -146,7 +148,8 @@ def run(
         pivot_x, pivot_y = cart_x_px, cy
 
         # Draw first node
-        pygame.draw.circle(screen, v.fg_color, (pivot_x, pivot_y), v.cart_node_radius)
+        pygame.gfxdraw.aacircle(screen, pivot_x, pivot_y, v.cart_node_radius, v.fg_color) ## AA outline
+        pygame.gfxdraw.filled_circle(screen, pivot_x, pivot_y, v.cart_node_radius, v.fg_color) # Filled circle
 
         for i in range(n):
             theta_i = state[1 + i]
@@ -163,10 +166,16 @@ def run(
             )
 
             # --- Draw Tip Node ---
-            # 1. Draw Fill
-            pygame.draw.circle(screen, v.node_fill_color, (end_x, end_y), v.node_radius)
-            # 2. Draw Outline
-            pygame.draw.circle(screen, v.fg_color, (end_x, end_y), v.node_radius, v.node_outline_width)
+            # Using gfxdraw for AA
+            
+            # 1. Draw Outline (Outer Circle)
+            pygame.gfxdraw.aacircle(screen, end_x, end_y, v.node_radius, v.fg_color) ## AA outline
+            pygame.gfxdraw.filled_circle(screen, end_x, end_y, v.node_radius, v.fg_color) # Filled circle
+            
+            # 2. Draw Fill (Inner Circle)
+            inner_radius = v.node_radius - v.node_outline_width
+            pygame.gfxdraw.aacircle(screen, end_x, end_y, inner_radius, v.node_fill_color) # AA outline
+            pygame.gfxdraw.filled_circle(screen, end_x, end_y, inner_radius, v.node_fill_color) # Filled circle
 
             # Next pivot is this tip
             pivot_x, pivot_y = end_x, end_y
