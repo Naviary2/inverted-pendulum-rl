@@ -129,7 +129,7 @@ class CartPendulumEnv(gym.Env):
         self._step_count += 1
 
         # 1. Scale the agent's action from [-1, 1] to the MuJoCo env's expected range [-3, 3]
-        scaled_action = np.clip(action, -1.0, 1.0) * 3.0
+        scaled_action = np.clip(action, -1.0, 1.0) * self.cfg.force_magnitude
 
         # 2. Step the underlying MuJoCo environment
         mujoco_obs, reward, terminated, truncated, info = self._mujoco_env.step(scaled_action)

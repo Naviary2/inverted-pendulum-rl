@@ -12,6 +12,7 @@ class PendulumConfig:
     """Physical parameters for the multi-link pendulum on a cart."""
 
     # Cart
+    force_magnitude: float = 20          # Maximum force the cart can apply on any one frame
     cart_mass: float = 1.0           # kg
     track_length: float = 2.4 * 2    # m (total track, cart can move ±half) - MUST MATCH XML!!!!!!
 
@@ -21,7 +22,6 @@ class PendulumConfig:
     # Links (lists allow N-link pendulums)
     num_links: int = 1
     link_lengths: List[float] = field(default_factory=lambda: [1.0])   # m - MUST MATCH XML!!!!!!
-    link_masses: List[float] = field(default_factory=lambda: [1])    # kg - MUST MATCH XML!!!!!!
 
     # Physics
     gravity: float = 9.81            # m/s²
@@ -29,7 +29,6 @@ class PendulumConfig:
 
     def __post_init__(self):
         assert len(self.link_lengths) == self.num_links
-        assert len(self.link_masses) == self.num_links
 
 
 @dataclass

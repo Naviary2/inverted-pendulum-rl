@@ -69,7 +69,8 @@ def run(
         if model is not None:
             action, _ = model.predict(obs, deterministic=True)
         else:
-            action = env.action_space.sample()
+            # Randomly choose max-left or max-right force.
+            action = np.random.choice([-1.0, 1.0], size=(1,))
         # Apply no force
         # action = np.array([0.0])
 
