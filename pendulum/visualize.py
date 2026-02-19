@@ -88,13 +88,21 @@ def run(
         cy = v.height // 2  # vertical centre (track line)
 
         # Track
-        track_half_px = int(p_cfg.track_length / 2 * v.scale)
-        pygame.draw.line(
+        track_len_px = int(p_cfg.track_length * v.scale) + v.cart_width + v.cart_node_radius
+        # Create a rectangle centered at (cx, cy)
+        track_rect = pygame.Rect(
+            cx - track_len_px // 2,  # Left
+            cy - v.track_h // 2,       # Top
+            track_len_px,            # Width
+            v.track_h                  # Height
+        )
+        # Draw hollow rounded rectangle
+        pygame.draw.rect(
             screen,
             v.fg_color,
-            (cx - track_half_px, cy),
-            (cx + track_half_px, cy),
-            1,
+            track_rect,
+            v.track_thick,             # Thickness (makes it hollow)
+            border_radius=v.track_rad  # Roundness
         )
 
         # Cart position
@@ -125,7 +133,7 @@ def run(
         pivot_x, pivot_y = cart_x_px, cy
 
         # Draw first node
-        pygame.draw.circle(screen, v.fg_color, (pivot_x, pivot_y), v.node_radius)
+        pygame.draw.circle(screen, v.fg_color, (pivot_x, pivot_y), v.cart_node_radius)
 
         for i in range(n):
             theta_i = state[1 + i]

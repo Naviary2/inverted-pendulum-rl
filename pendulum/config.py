@@ -54,14 +54,20 @@ class TrainingConfig:
 class VisualizationConfig:
     """Display settings for the pygame viewer."""
 
-    width: int = 800
-    height: int = 600
+    width: int = 1920
+    height: int = 1080
     fps: int = 60
-    scale: float = 100.0             # pixels per metre
+    scale: float = 250.0             # pixels per metre
+
+    track_h = 26        # Height requested
+    track_thick = 3     # Constant thickness (line width)
+    track_rad = 8       # Corner roundness (half height = full pill shape)
+
     cart_width: int = 80             # px
-    cart_height: int = 30            # px
-    node_radius: int = 12            # px
+    cart_height: int = 20            # px
+    cart_node_radius: int = 7            # px
+    node_radius: int = 24            # px
     pendulum_width: int = 4          # px
     bg_color: tuple = (10, 10, 10) # grey
     fg_color: tuple = (255, 255, 255) # white
-    cart_fill_alpha: int = 60        # 0-255 transparency for cart fill
+    cart_fill_alpha: int = 128        # 0-255 transparency for cart fill
