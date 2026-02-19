@@ -31,7 +31,7 @@ class PendulumConfig:
 class TrainingConfig:
     """Hyper-parameters for PPO training."""
 
-    total_timesteps: int = 500_000
+    total_timesteps: int = 60 * 100
     n_envs: int = field(default_factory=lambda: multiprocessing.cpu_count())
     learning_rate: float = 3e-4
     n_steps: int = 2048
