@@ -45,9 +45,9 @@ class CartPendulumEnv(gym.Env):
             render_mode=render_mode,
             xml_file=os.path.abspath(xml_path),
             # This tells Gym: "Run X physics steps for every 1 call to .step()"
-            frame_skip=self.cfg.physics_substeps, 
+            frame_skip=self.cfg.physics_substeps,
             # This forces the inner env to respect our custom limit set in visualize.py (instead of its maximum 1000 steps)
-            max_episode_steps=max_episode_steps, 
+            max_episode_steps=max_episode_steps,
         )
 
         # Calculate the high-resolution physics timestep
@@ -57,6 +57,10 @@ class CartPendulumEnv(gym.Env):
         # Overwrite the XML's timestep to match our desired FPS exactly.
         # This ensures real-time simulation: 60 FPS -> 0.0166s timestep.
         self._mujoco_env.unwrapped.model.opt.timestep = phys_timestep
+
+        # Overwrite the XML's gravity with the value from PendulumConfig
+        # MuJoCo gravity is a 3D vector [x, y, z]. We set the Z-axis (index 2).
+        self._mujoco_env.unwrapped.model.opt.gravity[2] = -self.cfg.gravity
 
         # --- Define observation and action spaces to match the original setup ---
 
