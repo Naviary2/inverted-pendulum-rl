@@ -22,7 +22,7 @@ import sys
 import numpy as np
 import pygame
 
-from .config import PendulumConfig, VisualizationConfig
+from .config import PendulumConfig, TrainingConfig, VisualizationConfig
 from .environment import CartPendulumEnv
 
 
@@ -44,7 +44,9 @@ def run(
     p_cfg = pendulum_cfg or PendulumConfig()
     v = vis_cfg or VisualizationConfig()
 
-    env = CartPendulumEnv(pendulum_config=p_cfg, max_episode_steps=60 * 100)
+    t_cfg = TrainingConfig() # Load training config to access total_timesteps
+    # Overwrite the maximum episode steps to match total timesteps for a full-length run
+    env = CartPendulumEnv(pendulum_config=p_cfg, max_episode_steps=t_cfg.total_timesteps)
     model = _load_model(model_path)
 
     pygame.init()

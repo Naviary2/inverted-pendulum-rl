@@ -46,6 +46,8 @@ class CartPendulumEnv(gym.Env):
             xml_file=os.path.abspath(xml_path),
             # This tells Gym: "Run X physics steps for every 1 call to .step()"
             frame_skip=self.cfg.physics_substeps, 
+            # This forces the inner env to respect our custom limit set in visualize.py (instead of its maximum 1000 steps)
+            max_episode_steps=max_episode_steps, 
         )
 
         # Calculate the high-resolution physics timestep
