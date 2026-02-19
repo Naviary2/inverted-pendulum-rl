@@ -17,8 +17,9 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import asyncio
 import math
-import sys
+import time
 
 import numpy as np
 import pygame
@@ -72,29 +73,33 @@ def _draw_thick_aaline(surface, p1, p2, width, color):
     pygame.gfxdraw.aapolygon(surface, corners, color)
 
 
-def run(
-    model_path: str = "",
-    pendulum_cfg: PendulumConfig | None = None,
-    vis_cfg: VisualizationConfig | None = None,
+async def _async_run(
+    env: CartPendulumEnv,
+    model,
+    p_cfg: PendulumConfig,
+    v: VisualizationConfig,
+    screen: pygame.Surface
 ):
-    """Open a pygame window and run the pendulum simulation."""
-    p_cfg = pendulum_cfg or PendulumConfig()
-    v = vis_cfg or VisualizationConfig()
-
-    t_cfg = TrainingConfig() # Load training config to access total_timesteps
-    # Overwrite the maximum episode steps to match total timesteps for a full-length run
-    env = CartPendulumEnv(pendulum_config=p_cfg, max_episode_steps=t_cfg.total_timesteps)
-    model = _load_model(model_path)
-
-    pygame.init()
-    screen = pygame.display.set_mode((v.width, v.height))
-    pygame.display.set_caption("Inverted Pendulum")
-    clock = pygame.time.Clock()
-
+    """Async main loop to handle physics and rendering with smoother VSync."""
+    loop = asyncio.get_running_loop()
+    
     obs, _ = env.reset()
     running = True
 
+    # Timing variables for VSync framerate limiting
+    limit_frame_duration = 1.0 / p_cfg.fps
+    next_frame_target = 0.0
+
     while running:
+        # --- Framerate Limiter ---
+        # Logic from: https://glyph.twistedmatrix.com/2022/02/a-better-pygame-mainloop.html
+        if limit_frame_duration:
+            this_frame = time.time()
+            delay = next_frame_target - this_frame
+            if delay > 0:
+                await asyncio.sleep(delay)
+            next_frame_target = time.time() + limit_frame_duration
+
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
@@ -218,10 +223,43 @@ def run(
             # Next pivot is this tip
             pivot_x, pivot_y = end_x, end_y
 
-        pygame.display.flip()
-        clock.tick(p_cfg.fps) # Sync render loop to physics config
+        # Run flip in an executor to avoid blocking the event loop during VSync wait
+        await loop.run_in_executor(None, pygame.display.flip)
 
-    pygame.quit()
+
+def run(
+    model_path: str = "",
+    pendulum_cfg: PendulumConfig | None = None,
+    vis_cfg: VisualizationConfig | None = None,
+):
+    """Open a pygame window and run the pendulum simulation."""
+    p_cfg = pendulum_cfg or PendulumConfig()
+    v = vis_cfg or VisualizationConfig()
+
+    t_cfg = TrainingConfig() # Load training config to access total_timesteps
+    # Overwrite the maximum episode steps to match total timesteps for a full-length run
+    env = CartPendulumEnv(pendulum_config=p_cfg, max_episode_steps=t_cfg.total_timesteps)
+    model = _load_model(model_path)
+
+    pygame.init()
+    
+    # Use SCALED and vsync=1 as recommended by:
+    # https://glyph.twistedmatrix.com/2022/02/a-better-pygame-mainloop.html
+    screen = pygame.display.set_mode(
+        (v.width, v.height), 
+        flags=pygame.SCALED, 
+        vsync=1
+    )
+    
+    pygame.display.set_caption("Inverted Pendulum")
+    
+    # Use asyncio.run to execute the async main loop
+    try:
+        asyncio.run(_async_run(env, model, p_cfg, v, screen))
+    except KeyboardInterrupt:
+        pass
+    finally:
+        pygame.quit()
 
 
 # ---- CLI entry point -------------------------------------------------------
