@@ -17,6 +17,7 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import math
 import sys
 
 import numpy as np
@@ -34,6 +35,41 @@ def _load_model(path: str):
     from stable_baselines3 import PPO
 
     return PPO.load(path)
+
+
+def _draw_thick_aaline(surface, p1, p2, width, color):
+    """Draws a thick anti-aliased line (simulated via polygon)."""
+    x1, y1 = p1
+    x2, y2 = p2
+    dx = x2 - x1
+    dy = y2 - y1
+    length = math.hypot(dx, dy)
+
+    if length == 0:
+        return
+
+    # Normalized direction vector components
+    ux = dx / length
+    uy = dy / length
+
+    # Perpendicular vector ((-uy, ux) corresponds to rotation by 90 degrees)
+    # Scaled by half width to get offset from center line
+    half_width = width / 2
+    px = -uy * half_width
+    py = ux * half_width
+
+    # Calculate 4 corners of the rectangle
+    corners = [
+        (int(x1 + px), int(y1 + py)),
+        (int(x1 - px), int(y1 - py)),
+        (int(x2 - px), int(y2 - py)),
+        (int(x2 + px), int(y2 + py)),
+    ]
+
+    # Draw filled polygon (the body)
+    pygame.gfxdraw.filled_polygon(surface, corners, color)
+    # Draw anti-aliased outline (the smooth edges)
+    pygame.gfxdraw.aapolygon(surface, corners, color)
 
 
 def run(
@@ -72,8 +108,9 @@ def run(
         else:
             # Randomly choose max-left or max-right force.
             action = np.random.choice([-1, 1], size=(1,))
-        # Apply no force
-        # action = np.array([0.0])
+            # action = np.random.choice([-0.1, 0.1], size=(1,))
+            # Apply no force
+            # action = np.array([0.0])
 
         obs, _reward, terminated, truncated, _ = env.step(action)
 
@@ -156,13 +193,14 @@ def run(
             end_x = pivot_x + int(lengths[i] * v.scale * np.sin(theta_i))
             end_y = pivot_y - int(lengths[i] * v.scale * np.cos(theta_i))
 
-            # Rod
-            pygame.draw.line(
+            # Using custom helper for AA thick line,
+            # Since gfxdraw.line doesn't support width and pygame.draw.line isn't anti-aliased.
+            _draw_thick_aaline(
                 screen,
-                v.fg_color,
                 (pivot_x, pivot_y),
                 (end_x, end_y),
                 v.pendulum_width,
+                v.fg_color
             )
 
             # --- Draw Tip Node ---
