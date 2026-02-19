@@ -1,33 +1,27 @@
 # pendulum/environment.py
 
-"""Gymnasium environment for balancing a single inverted pendulum on a cart.
+"""
+Gymnasium environment for balancing a single inverted pendulum on a cart,
+powered by the MuJoCo physics engine.
 
-Observation (4-dim continuous):
-    0  x    – cart position
-    1  ẋ    – cart velocity
-    2  θ₁   – angle of link 1 from vertical (0 = upright)
-    3  θ̇₁   – angular velocity of link 1
-
-Action (1-dim continuous):
-    Cart acceleration (clipped to ±force_limit / cart_mass equivalent).
-
-The action is interpreted as a desired cart acceleration; internally it is
-converted to a force  F = (M_cart + Σmᵢ) · a_desired  so that the
-cart-only response roughly matches the requested acceleration.
+This file acts as a wrapper around Gymnasium's 'InvertedPendulum-v4'
+to maintain compatibility with the existing training and visualization code.
 """
 
 from __future__ import annotations
 
 import gymnasium as gym
 import numpy as np
+import os
 from gymnasium import spaces
 
 from .config import PendulumConfig
-from .physics import step as physics_step
 
 
 class CartPendulumEnv(gym.Env):
-    """Single inverted pendulum on a cart (extensible to N links)."""
+    """
+    A wrapper for the MuJoCo 'InvertedPendulum-v4' environment.
+    """
 
     metadata = {"render_modes": ["human"], "render_fps": 50}
 
@@ -38,20 +32,34 @@ class CartPendulumEnv(gym.Env):
         render_mode: str | None = None,
     ):
         super().__init__()
+        # Although pendulum_config is unused, we keep it for API consistency
         self.cfg = pendulum_config or PendulumConfig()
         self.max_episode_steps = max_episode_steps
         self.render_mode = render_mode
-        self.dt = 0.02  # 50 Hz physics
 
-        n = self.cfg.num_links
+        xml_path = os.path.join(os.path.dirname(__file__), "..", "assets", "inverted_pendulum.xml")
 
-        # --- action: cart acceleration (scalar, continuous) ---
+        # Create the underlying MuJoCo environment
+        self._mujoco_env = gym.make(
+            "InvertedPendulum-v5",
+            render_mode=render_mode,
+            xml_file=os.path.abspath(xml_path),
+            frame_skip=1,  # 1 physics step per env step (1:1 ratio)
+        )
+
+        # Overwrite the XML's timestep to match our desired FPS exactly.
+        # This ensures real-time simulation: 60 FPS -> 0.0166s timestep.
+        self._mujoco_env.unwrapped.model.opt.timestep = 1.0 / self.cfg.fps
+
+        # --- Define observation and action spaces to match the original setup ---
+
+        # The PPO agent expects a normalised action of [-1, 1]
         self.action_space = spaces.Box(
             low=-1.0, high=1.0, shape=(1,), dtype=np.float32
         )
 
-        # --- observation ---
-        # For single-link: [x, x_dot, theta, theta_dot]
+        # The observation space definition from the original environment
+        n = self.cfg.num_links
         high = np.array(
             [
                 self.cfg.track_length / 2,  # x
@@ -62,76 +70,58 @@ class CartPendulumEnv(gym.Env):
         )
         self.observation_space = spaces.Box(-high, high, dtype=np.float32)
 
-        # internal state: [x, θ₁, …, ẋ, θ̇₁, …]
+        # The _state variable is crucial for the visualizer.
+        # MuJoCo's observation is [x, θ, ẋ, θ̇], which we store directly here.
         self._state: np.ndarray | None = None
         self._step_count = 0
 
-    # -----------------------------------------------------------------
     def _get_obs(self) -> np.ndarray:
-        """Map internal state to observation vector."""
-        n = self.cfg.num_links
-        s = self._state
-        # state layout: [x, θ₁…θₙ, ẋ, θ̇₁…θ̇ₙ]
-        x = s[0]
-        x_dot = s[1 + n]
-        obs = [x, x_dot]
-        for i in range(n):
-            obs.append(s[1 + i])        # θᵢ
-            obs.append(s[1 + n + 1 + i])  # θ̇ᵢ
-        return np.array(obs, dtype=np.float32)
+        """
+        Map the internal MuJoCo state to the observation format expected by the agent.
+        - MuJoCo state/obs: [x, θ, ẋ, θ̇]
+        - Original agent obs: [x, ẋ, θ, θ̇]
+        This function performs that re-ordering.
+        """
+        assert self._state is not None
+        x, theta, x_dot, theta_dot = self._state
+        return np.array([x, x_dot, theta, theta_dot], dtype=np.float32)
 
-    # -----------------------------------------------------------------
     def reset(self, *, seed=None, options=None):
         super().reset(seed=seed)
-        n = self.cfg.num_links
-        # Start hanging straight down (θ = π)
-        self._state = np.zeros(2 * (1 + n))
-        self._state[1: 1 + n] = np.pi
+        
+        # Reset the underlying MuJoCo environment
+        mujoco_obs, info = self._mujoco_env.reset(seed=seed, options=options)
+        
+        # Store the state in the format required by the visualizer: [x, θ, ẋ, θ̇]
+        self._state = mujoco_obs
         self._step_count = 0
-        return self._get_obs(), {}
+        
+        return self._get_obs(), info
 
-    # -----------------------------------------------------------------
     def step(self, action):
         assert self._state is not None, "Call reset() first"
         self._step_count += 1
 
-        # Convert normalised action [-1,1] -> force
-        acc = float(np.clip(action[0], -1.0, 1.0))
-        force = acc * self.cfg.force_limit
+        # 1. Scale the agent's action from [-1, 1] to the MuJoCo env's expected range [-3, 3]
+        scaled_action = np.clip(action, -1.0, 1.0) * 3.0
 
-        # Physics step
-        self._state = physics_step(self.cfg, self._state, force, self.dt)
+        # 2. Step the underlying MuJoCo environment
+        mujoco_obs, reward, terminated, truncated, info = self._mujoco_env.step(scaled_action)
 
-        obs = self._get_obs()
+        # 3. Update the internal state for the visualizer
+        self._state = mujoco_obs
+        
+        # 4. Use MuJoCo's termination/truncation logic, but also respect max_episode_steps
+        if self._step_count >= self.max_episode_steps > 0:
+            truncated = True
 
-        # --- REWARD CALCULATION ---
-        n = self.cfg.num_links
-        x = self._state[0]
-        # Get raw angles
-        theta_raw = self._state[1 : 1 + n]
-
-        # 1. Normalize angle to be between -pi and +pi 
-        # (This handles cases where the pendulum spins around multiple times)
-        theta_normalized = ((theta_raw + np.pi) % (2 * np.pi)) - np.pi
-
-        # 2. Calculate Linear Reward
-        # 0 rad (up)   = +1
-        # pi/2 (horiz) =  0
-        # pi (down)    = -1
-        # Formula: 2 - (2 / pi) * |theta|
-        angular_reward = 1.0 - (1.0 / np.pi) * np.abs(theta_normalized)
-
-        # If you have multiple links, we average the score, otherwise it's just the single scalar
-        reward = float(np.mean(angular_reward))
-
-        # --- TERMINATION ---
+        # Override the termination signal from MuJoCo to allow free swinging.
+        # Otherwise whenever the pendulum falls past 15 degrees, it gets reset.
         terminated = False
-        # Cart off track
-        if np.abs(x) > self.cfg.track_length / 2:
-            terminated = True
-            reward = 0.0
 
-        truncated = self._step_count >= self.max_episode_steps
-
-        return obs, reward, terminated, truncated, {}
+        # 5. Return the re-ordered observation for the agent
+        return self._get_obs(), reward, terminated, truncated, info
     
+    def close(self):
+        """Close the underlying MuJoCo environment."""
+        self._mujoco_env.close()

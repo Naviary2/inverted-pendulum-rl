@@ -15,6 +15,8 @@ class PendulumConfig:
     cart_mass: float = 1.0           # kg
     track_length: float = 4.8        # m (total track, cart can move ±half)
 
+    fps: int = 60                    # Hz (Controls both render speed and physics timestep)
+
     # Links (lists allow N-link pendulums)
     num_links: int = 1
     link_lengths: List[float] = field(default_factory=lambda: [1.0])   # m
