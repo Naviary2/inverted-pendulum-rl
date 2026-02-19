@@ -1,3 +1,5 @@
+# pendulum/visualize.py
+
 """Pygame visualisation of the trained pendulum model.
 
 Renders:

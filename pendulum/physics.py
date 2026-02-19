@@ -1,3 +1,5 @@
+# pendulum/physics.py
+
 """Multi-link pendulum on a cart – Lagrangian dynamics.
 
 Generalised coordinates:

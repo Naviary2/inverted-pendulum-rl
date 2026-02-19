@@ -1,3 +1,5 @@
+# pendulum/config.py
+
 """Configuration for pendulum simulation and training."""
 
 import multiprocessing

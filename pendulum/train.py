@@ -1,3 +1,5 @@
+# pendulum/train.py
+
 """Train a PPO agent to balance the inverted pendulum.
 
 Uses stable-baselines3 with SubprocVecEnv for parallel training across
