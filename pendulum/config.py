@@ -59,15 +59,20 @@ class VisualizationConfig:
     fps: int = 60
     scale: float = 250.0             # pixels per metre
 
-    track_h = 26        # Height requested
+    track_h = 30        # Height requested
     track_thick = 3     # Constant thickness (line width)
     track_rad = 8       # Corner roundness (half height = full pill shape)
 
     cart_width: int = 80             # px
-    cart_height: int = 20            # px
+    cart_height: int = 24            # px
+    cart_rad: int = 6              # px
     cart_node_radius: int = 7            # px
+
     node_radius: int = 24            # px
-    pendulum_width: int = 4          # px
-    bg_color: tuple = (10, 10, 10) # grey
+    node_fill_color: tuple = (50, 160, 30)
+    node_outline_width: int = 4
+
+    pendulum_width: int = 8          # px
+    bg_color: tuple = (35, 35, 35) # grey
     fg_color: tuple = (255, 255, 255) # white
     cart_fill_alpha: int = 128        # 0-255 transparency for cart fill

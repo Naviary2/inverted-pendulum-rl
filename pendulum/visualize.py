@@ -54,9 +54,6 @@ def run(
     pygame.display.set_caption("Inverted Pendulum")
     clock = pygame.time.Clock()
 
-    # Semi-transparent cart surface (needs per-pixel alpha)
-    cart_surf = pygame.Surface((v.cart_width, v.cart_height), pygame.SRCALPHA)
-
     obs, _ = env.reset()
     running = True
 
@@ -115,15 +112,22 @@ def run(
             cy - v.cart_height // 2,
             v.cart_width,
             v.cart_height,
+            border_radius=v.track_rad  # Roundness
         )
-        cart_surf.fill((0, 0, 0, 0))  # clear
         pygame.draw.rect(
-            cart_surf,
-            (*v.fg_color, v.cart_fill_alpha),
-            cart_surf.get_rect(),
+            screen,
+            v.node_fill_color,
+            cart_rect,
+            border_radius=v.cart_rad  # Roundness
         )
-        pygame.draw.rect(cart_surf, (*v.fg_color, 255), cart_surf.get_rect(), 2)
-        screen.blit(cart_surf, cart_rect.topleft)
+        # Draw hollow rounded rectangle
+        pygame.draw.rect(
+            screen,
+            v.fg_color,
+            cart_rect,
+            v.track_thick,             # Thickness (makes it hollow)
+            border_radius=v.cart_rad  # Roundness
+        )
 
         # --- pendulum links & nodes ---
         n = p_cfg.num_links
@@ -149,8 +153,11 @@ def run(
                 v.pendulum_width,
             )
 
-            # Tip node
-            pygame.draw.circle(screen, v.fg_color, (end_x, end_y), v.node_radius)
+            # --- Draw Tip Node ---
+            # 1. Draw Fill
+            pygame.draw.circle(screen, v.node_fill_color, (end_x, end_y), v.node_radius)
+            # 2. Draw Outline
+            pygame.draw.circle(screen, v.fg_color, (end_x, end_y), v.node_radius, v.node_outline_width)
 
             # Next pivot is this tip
             pivot_x, pivot_y = end_x, end_y
