@@ -15,7 +15,7 @@
 			<geom name="cart" pos="0 0 0" size="0.1 0.05 0.02" type="box"/>
 			<body name="pole" pos="0 0 0">
 				<joint axis="0 1 0" name="hinge" pos="0 0 0" type="hinge" limited="false"/>
-				<geom fromto="0 0 0 0.001 0 0.6" name="pole" size="0.049 0.3" type="capsule"/>
+				<geom fromto="0 0 0 0.001 0 1.0" name="pole" size="0.049 0.3" type="capsule"/>
 			</body>
 		</body>
 	</worldbody>
