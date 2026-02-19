@@ -16,6 +16,7 @@ class PendulumConfig:
     track_length: float = 4.8        # m (total track, cart can move ±half)
 
     fps: int = 60                    # Hz (Controls both render speed and physics timestep)
+    physics_substeps: int = 1        # How many physics step per 1 render step. Higher = more accurate physics but slower training.
 
     # Links (lists allow N-link pendulums)
     num_links: int = 1

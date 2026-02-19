@@ -44,12 +44,17 @@ class CartPendulumEnv(gym.Env):
             "InvertedPendulum-v5",
             render_mode=render_mode,
             xml_file=os.path.abspath(xml_path),
-            frame_skip=1,  # 1 physics step per env step (1:1 ratio)
+            # This tells Gym: "Run X physics steps for every 1 call to .step()"
+            frame_skip=self.cfg.physics_substeps, 
         )
 
+        # Calculate the high-resolution physics timestep
+        # Example: 60 FPS * 4 substeps = 240Hz physics -> 0.00416s timestep
+        phys_freq = self.cfg.fps * self.cfg.physics_substeps
+        phys_timestep = 1.0 / phys_freq
         # Overwrite the XML's timestep to match our desired FPS exactly.
         # This ensures real-time simulation: 60 FPS -> 0.0166s timestep.
-        self._mujoco_env.unwrapped.model.opt.timestep = 1.0 / self.cfg.fps
+        self._mujoco_env.unwrapped.model.opt.timestep = phys_timestep
 
         # --- Define observation and action spaces to match the original setup ---
 
