@@ -1,0 +1,22 @@
+<mujoco model="inverted pendulum">
+	<compiler inertiafromgeom="true"/>
+	<default>
+		<joint armature="0" damping="1" limited="true"/>
+		<geom contype="0" friction="1 0.1 0.1" rgba="0.7 0.7 0 1"/>
+	</default>
+	<option gravity="0 0 -9.81" integrator="RK4" timestep="0.02"/>
+	<size nkey="5" nuser_jnt="1"/>
+	<worldbody>
+		<body name="cart" pos="0 0 0">
+			<joint axis="1 0 0" limited="true" name="slider" pos="0 0 0" range="-1 1" type="slide"/>
+			<geom name="cart" pos="0 0 0" size="0.1 0.05 0.02" type="box"/>
+			<body name="pole" pos="0 0 0">
+				<joint axis="0 1 0" name="hinge" pos="0 0 0" type="hinge" limited="false"/>
+				<geom fromto="0 0 0 0.001 0 0.6" name="pole" size="0.049 0.3" type="capsule"/>
+			</body>
+		</body>
+	</worldbody>
+	<actuator>
+		<motor gear="1" joint="slider" name="slide"/>
+	</actuator>
+</mujoco>

@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import gymnasium as gym
 import numpy as np
+import os
 from gymnasium import spaces
 
 from .config import PendulumConfig
@@ -36,8 +37,14 @@ class CartPendulumEnv(gym.Env):
         self.max_episode_steps = max_episode_steps
         self.render_mode = render_mode
 
+        xml_path = os.path.join(os.path.dirname(__file__), "..", "assets", "inverted_pendulum.xml")
+
         # Create the underlying MuJoCo environment
-        self._mujoco_env = gym.make("InvertedPendulum-v4", render_mode=render_mode)
+        self._mujoco_env = gym.make(
+            "InvertedPendulum-v5",
+            render_mode=render_mode,
+            xml_file=os.path.abspath(xml_path),
+        )
 
         # --- Define observation and action spaces to match the original setup ---
 
