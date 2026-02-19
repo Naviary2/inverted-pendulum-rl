@@ -44,7 +44,7 @@ def run(
     p_cfg = pendulum_cfg or PendulumConfig()
     v = vis_cfg or VisualizationConfig()
 
-    env = CartPendulumEnv(pendulum_config=p_cfg, max_episode_steps=0)
+    env = CartPendulumEnv(pendulum_config=p_cfg, max_episode_steps=60 * 100)
     model = _load_model(model_path)
 
     pygame.init()
