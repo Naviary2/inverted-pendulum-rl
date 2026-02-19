@@ -1,3 +1,5 @@
+# pendulum/environment.py
+
 """Gymnasium environment for balancing a single inverted pendulum on a cart.
 
 Observation (4-dim continuous):
@@ -117,7 +119,7 @@ class CartPendulumEnv(gym.Env):
         # pi/2 (horiz) =  0
         # pi (down)    = -1
         # Formula: 2 - (2 / pi) * |theta|
-        angular_reward = 2.0 - (2.0 / np.pi) * np.abs(theta_normalized)
+        angular_reward = 1.0 - (1.0 / np.pi) * np.abs(theta_normalized)
 
         # If you have multiple links, we average the score, otherwise it's just the single scalar
         reward = float(np.mean(angular_reward))
