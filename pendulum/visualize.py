@@ -107,6 +107,14 @@ def run(
         state = env._state
         cart_x_px = cx + int(state[0] * v.scale)
 
+        # Define the hard limit based on the track length
+        half_length = p_cfg.track_length / 2.0
+        # Clamp the cart's x position so it visually never leaves the track
+        # (Even if MuJoCo calculates a slight penetration of the wall)
+        cart_x = float(np.clip(state[0], -half_length, half_length))
+        # Use this clamped value to calculate pixels
+        cart_x_px = cx + int(cart_x * v.scale)
+
         # Cart rectangle (outlined + translucent fill)
         cart_rect = pygame.Rect(
             cart_x_px - v.cart_width // 2,
