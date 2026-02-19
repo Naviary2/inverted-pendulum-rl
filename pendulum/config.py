@@ -55,8 +55,8 @@ class VisualizationConfig:
     scale: float = 100.0             # pixels per metre
     cart_width: int = 80             # px
     cart_height: int = 30            # px
-    node_radius: int = 6            # px
-    pendulum_width: int = 2          # px
-    bg_color: tuple = (0, 0, 0)      # black
-    fg_color: tuple = (255, 255, 255)  # white
+    node_radius: int = 12            # px
+    pendulum_width: int = 4          # px
+    bg_color: tuple = (10, 10, 10) # grey
+    fg_color: tuple = (255, 255, 255) # white
     cart_fill_alpha: int = 60        # 0-255 transparency for cart fill
