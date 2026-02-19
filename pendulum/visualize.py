@@ -146,7 +146,7 @@ def run(
             pivot_x, pivot_y = end_x, end_y
 
         pygame.display.flip()
-        clock.tick(v.fps)
+        clock.tick(p_cfg.fps) # Sync render loop to physics config
 
     pygame.quit()
 

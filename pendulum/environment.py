@@ -44,7 +44,12 @@ class CartPendulumEnv(gym.Env):
             "InvertedPendulum-v5",
             render_mode=render_mode,
             xml_file=os.path.abspath(xml_path),
+            frame_skip=1,  # 1 physics step per env step (1:1 ratio)
         )
+
+        # Overwrite the XML's timestep to match our desired FPS exactly.
+        # This ensures real-time simulation: 60 FPS -> 0.0166s timestep.
+        self._mujoco_env.unwrapped.model.opt.timestep = 1.0 / self.cfg.fps
 
         # --- Define observation and action spaces to match the original setup ---
 
