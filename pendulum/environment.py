@@ -93,7 +93,7 @@ class CartPendulumEnv(gym.Env):
         assert self._state is not None, "Call reset() first"
         self._step_count += 1
 
-        # Convert normalised action [-1,1] → force
+        # Convert normalised action [-1,1] -> force
         acc = float(np.clip(action[0], -1.0, 1.0))
         force = acc * self.cfg.force_limit
 
@@ -102,22 +102,28 @@ class CartPendulumEnv(gym.Env):
 
         obs = self._get_obs()
 
-        # --- reward ---
+        # --- REWARD CALCULATION ---
         n = self.cfg.num_links
         x = self._state[0]
-        theta = self._state[1: 1 + n]
+        # Get raw angles
+        theta_raw = self._state[1 : 1 + n]
 
-        # Reward: stay upright + stay centred
-        angle_penalty = float(np.sum(theta ** 2))
-        position_penalty = (x / (self.cfg.track_length / 2)) ** 2
-        reward = 1.0 - 0.5 * angle_penalty - 0.5 * position_penalty
+        # 1. Normalize angle to be between -pi and +pi 
+        # (This handles cases where the pendulum spins around multiple times)
+        theta_normalized = ((theta_raw + np.pi) % (2 * np.pi)) - np.pi
 
-        # --- termination ---
+        # 2. Calculate Linear Reward
+        # 0 rad (up)   = +1
+        # pi/2 (horiz) =  0
+        # pi (down)    = -1
+        # Formula: 2 - (2 / pi) * |theta|
+        angular_reward = 2.0 - (2.0 / np.pi) * np.abs(theta_normalized)
+
+        # If you have multiple links, we average the score, otherwise it's just the single scalar
+        reward = float(np.mean(angular_reward))
+
+        # --- TERMINATION ---
         terminated = False
-        # Fall over: any link angle > 90°
-        if np.any(np.abs(theta) > np.pi / 2):
-            terminated = True
-            reward = 0.0
         # Cart off track
         if np.abs(x) > self.cfg.track_length / 2:
             terminated = True
@@ -126,3 +132,4 @@ class CartPendulumEnv(gym.Env):
         truncated = self._step_count >= self.max_episode_steps
 
         return obs, reward, terminated, truncated, {}
+    
