@@ -13,15 +13,15 @@ class PendulumConfig:
 
     # Cart
     cart_mass: float = 1.0           # kg
-    track_length: float = 4.8        # m (total track, cart can move ±half)
+    track_length: float = 2.4 * 2    # m (total track, cart can move ±half) - MUST MATCH XML!!!!!!
 
     fps: int = 60                    # Hz (Controls both render speed and physics timestep)
     physics_substeps: int = 1        # How many physics step per 1 render step. Higher = more accurate physics but slower training.
 
     # Links (lists allow N-link pendulums)
     num_links: int = 1
-    link_lengths: List[float] = field(default_factory=lambda: [1.0])   # m
-    link_masses: List[float] = field(default_factory=lambda: [0.1])    # kg
+    link_lengths: List[float] = field(default_factory=lambda: [1.0])   # m - MUST MATCH XML!!!!!!
+    link_masses: List[float] = field(default_factory=lambda: [1])    # kg - MUST MATCH XML!!!!!!
 
     # Physics
     gravity: float = 9.81            # m/s²
