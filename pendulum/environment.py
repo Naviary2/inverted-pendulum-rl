@@ -97,13 +97,32 @@ class CartPendulumEnv(gym.Env):
         super().reset(seed=seed)
         
         # Reset the underlying MuJoCo environment
-        mujoco_obs, info = self._mujoco_env.reset(seed=seed, options=options)
+        self._mujoco_env.reset(seed=seed, options=options)
         
+        # Get pointers to the physics state
+        qpos = self._mujoco_env.unwrapped.data.qpos
+        qvel = self._mujoco_env.unwrapped.data.qvel
+        
+        # qpos[0] is the cart position (center)
+        qpos[0] = 0.0
+        
+        # qpos[1] is the angle. 0 is up, pi is down.
+        qpos[1] = np.pi 
+        
+        # Zero out all velocities so it starts perfectly still
+        qvel[:] = 0.0
+        
+        # Apply this state to the simulation
+        self._mujoco_env.unwrapped.set_state(qpos, qvel)
+        
+        # Get the observation
+        mujoco_obs = self._mujoco_env.unwrapped._get_obs()
+
         # Store the state in the format required by the visualizer: [x, θ, ẋ, θ̇]
         self._state = mujoco_obs
         self._step_count = 0
         
-        return self._get_obs(), info
+        return self._get_obs(), {}
 
     def step(self, action):
         assert self._state is not None, "Call reset() first"
