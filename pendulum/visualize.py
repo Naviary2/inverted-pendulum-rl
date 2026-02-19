@@ -66,10 +66,13 @@ def run(
                 obs, _ = env.reset()
 
         # --- action ---
-        if model is not None:
-            action, _ = model.predict(obs, deterministic=True)
-        else:
-            action = env.action_space.sample()
+        # Apply random force
+        # if model is not None:
+        #     action, _ = model.predict(obs, deterministic=True)
+        # else:
+        #     action = env.action_space.sample()
+        # Apply no force
+        action = np.array([0.0])
 
         obs, _reward, terminated, truncated, _ = env.step(action)
 
