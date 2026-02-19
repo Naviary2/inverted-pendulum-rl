@@ -82,10 +82,9 @@ class CartPendulumEnv(gym.Env):
     def reset(self, *, seed=None, options=None):
         super().reset(seed=seed)
         n = self.cfg.num_links
-        # Start near upright with small random perturbation
-        state = np.zeros(2 * (1 + n))
-        state[1: 1 + n] = self.np_random.uniform(-0.05, 0.05, size=n)  # θ
-        self._state = state
+        # Start hanging straight down (θ = π)
+        self._state = np.zeros(2 * (1 + n))
+        self._state[1: 1 + n] = np.pi
         self._step_count = 0
         return self._get_obs(), {}
 
