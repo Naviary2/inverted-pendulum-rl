@@ -1,3 +1,5 @@
+<!-- inverted_pendulum.xml -->
+
 <mujoco model="inverted pendulum">
 	<compiler inertiafromgeom="true"/>
 		<default>
