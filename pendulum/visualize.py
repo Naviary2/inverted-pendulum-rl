@@ -23,7 +23,7 @@ import time
 
 import numpy as np
 
-from PySide6.QtCore import Qt, QTimer
+from PySide6.QtCore import Qt
 from PySide6.QtGui import QKeyEvent
 from PySide6.QtWidgets import QApplication, QMainWindow
 import PySide6.QtAsyncio as QtAsyncio
@@ -148,12 +148,8 @@ def run(
     window = PendulumWindow(env, p_cfg, v)
     window.show()
 
-    # Schedule the async loop once QtAsyncio's event loop is running
-    QTimer.singleShot(0, lambda: asyncio.ensure_future(
-        _async_run(window, model, p_cfg)
-    ))
     # QtAsyncio.run() drives both the Qt and asyncio event loops
-    QtAsyncio.run()
+    QtAsyncio.run(_async_run(window, model, p_cfg), keep_running=True)
 
 
 # ---- CLI entry point -------------------------------------------------------
