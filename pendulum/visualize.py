@@ -24,6 +24,7 @@ import time
 import numpy as np
 import pygame
 import pygame.gfxdraw
+import mujoco
 
 from .config import PendulumConfig, TrainingConfig, VisualizationConfig
 from .environment import CartPendulumEnv
@@ -90,6 +91,14 @@ async def _async_run(
     limit_frame_duration = 1.0 / p_cfg.fps
     next_frame_target = 0.0
 
+    # --- Manual Interaction State ---
+    is_dragging = False
+    cursor_set_to_hand = False
+    
+    # Access internal MuJoCo handles for direct manipulation
+    mujoco_model = env._mujoco_env.unwrapped.model
+    mujoco_data = env._mujoco_env.unwrapped.data
+
     while running:
         # --- Framerate Limiter ---
         # Logic from: https://glyph.twistedmatrix.com/2022/02/a-better-pygame-mainloop.html
@@ -100,33 +109,93 @@ async def _async_run(
                 await asyncio.sleep(delay)
             next_frame_target = time.time() + limit_frame_duration
 
+        # Calculate screen geometry for hit testing
+        cx = v.width // 2
+        cy = v.height // 2
+        
+        # Get current cart pixel position for hit testing
+        state = env._state
+        current_cart_x_px = cx + int(state[0] * v.scale)
+        cart_hitbox = pygame.Rect(
+            current_cart_x_px - v.cart_width // 2,
+            cy - v.cart_height // 2,
+            v.cart_width,
+            v.cart_height
+        )
+
+        mouse_pos = pygame.mouse.get_pos()
+        is_hovering = cart_hitbox.collidepoint(mouse_pos)
+
+        # Handle Events
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
             elif event.type == pygame.KEYDOWN and event.key == pygame.K_r:
                 obs, _ = env.reset()
+                
+            # --- Mouse Interactions ---
+            elif event.type == pygame.MOUSEBUTTONDOWN:
+                if event.button == 1 and is_hovering:
+                    is_dragging = True
+                    # Activate the weld constraint to grab the cart
+                    mujoco_data.eq_active = 1
+            elif event.type == pygame.MOUSEBUTTONUP:
+                if event.button == 1:
+                    is_dragging = False
+                    # Deactivate the weld constraint to release the cart
+                    mujoco_data.eq_active = 0
+
+        # --- Cursor Logic ---
+        if is_dragging:
+            if cursor_set_to_hand:
+                pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_SIZEALL)
+                cursor_set_to_hand = False
+        elif is_hovering:
+            if not cursor_set_to_hand:
+                pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_HAND)
+                cursor_set_to_hand = True
+        else:
+            if cursor_set_to_hand:
+                pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_ARROW)
+                cursor_set_to_hand = False
 
         # --- action ---
-        # Apply random force
-        if model is not None:
-            action, _ = model.predict(obs, deterministic=True)
+        
+        if is_dragging:
+            # 1. Convert Mouse X (pixels) -> World X (meters)
+            mouse_x = mouse_pos[0]
+            target_x = (mouse_x - cx) / v.scale
+            
+            # Clamp to track limits
+            half_track = p_cfg.track_length / 2.0
+            target_x = float(np.clip(target_x, -half_track, half_track))
+            
+            # 2. Update the position of the mocap body
+            # The weld constraint will pull the cart towards this position.
+            mujoco_data.mocap_pos[0, 0] = target_x
+            
+            # 3. Apply zero action while dragging
+            action = np.array([0.0], dtype=np.float32)
+
         else:
-            # Randomly choose max-left or max-right force.
-            action = np.random.choice([-1, 1], size=(1,))
-            # action = np.random.choice([-0.1, 0.1], size=(1,))
-            # Apply no force
-            # action = np.array([0.0])
+            if model is not None:
+                # Normal AI control
+                action, _ = model.predict(obs, deterministic=True)
+            else:
+                # Randomly choose max-left or max-right force.
+                action = np.random.choice([-1, 1], size=(1,))
+                # action = np.random.choice([-0.1, 0.1], size=(1,))
+                # Apply no force
+                action = np.array([0.0])
 
         obs, _reward, terminated, truncated, _ = env.step(action)
 
         if terminated or truncated:
-            obs, _ = env.reset()
+            if not is_dragging:
+                obs, _ = env.reset()
 
         # --- draw ---
         screen.fill(v.bg_color)
-
-        cx = v.width // 2   # centre x of screen
-        cy = v.height // 2  # vertical centre (track line)
 
         # Track
         track_len_px = int(p_cfg.track_length * v.scale) + v.cart_width + v.cart_node_radius
@@ -146,9 +215,8 @@ async def _async_run(
             border_radius=v.track_rad  # Roundness
         )
 
-        # Cart position
+        # Cart position (Recalculate for rendering after step)
         state = env._state
-        cart_x_px = cx + int(state[0] * v.scale)
 
         # Define the hard limit based on the track length
         half_length = p_cfg.track_length / 2.0
