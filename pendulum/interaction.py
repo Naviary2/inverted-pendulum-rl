@@ -80,14 +80,12 @@ class CartItem(QGraphicsRectItem):
         #   top-wheel centre y = strut_cy_px − strut_h/2·cos_a
         #   track top rail   y = −body_h/2
         #   radius = (−body_h/2) − (strut_cy_px − strut_h/2·cos_a)
-        #          = strut_h/2·cos_a − strut_cy_px − body_h/2
-        # Subtract half the track thickness so the wheel fits inside the rail.
+        #          = strut_h/2·cos_a − strut_cy_px − body_h/2 - track_thick_px / 2
         wheel_rad_top = strut_h / 2 * cos_a - strut_cy - body_h / 2 - track_thick_px / 2
         # Bottom wheel sits just outside the track's bottom rail.
         #   bottom-wheel centre y = strut_cy_px + strut_h/2·cos_a
         #   track bottom rail   y = body_h/2
-        #   radius = (strut_cy_px + strut_h/2·cos_a) − body_h/2
-        # Subtract half the track thickness so the wheel fits inside the rail.
+        #   radius = (strut_cy_px + strut_h/2·cos_a) − body_h/2 - track_thick_px / 2
         wheel_rad_bottom = strut_cy + strut_h / 2 * cos_a - body_h / 2 - track_thick_px / 2
         if wheel_rad_top <= 0 or wheel_rad_bottom <= 0:
             raise ValueError(
