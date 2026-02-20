@@ -48,6 +48,7 @@ class CartPendulumEnv(gym.Env):
             frame_skip=self.cfg.physics_substeps,
             # This forces the inner env to respect our custom limit set in visualize.py (instead of its maximum 1000 steps)
             max_episode_steps=max_episode_steps,
+            disable_env_checker=True,
         )
 
         # Calculate the high-resolution physics timestep
