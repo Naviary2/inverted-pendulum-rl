@@ -16,14 +16,20 @@
 		<!-- We will move it to follow the mouse cursor. -->
 		<body name="target_mocap" mocap="true" pos="0 0 0" />
 
+		<!-- Force circle: a mocap body that follows the mouse and collides with other bodies -->
+		<!-- The radius (0.12m) corresponds to 30px at scale=250 pixels/meter -->
+		<body name="force_circle_mocap" mocap="true" pos="0 0 100">
+			<geom name="force_circle" type="sphere" size="0.12" contype="1" conaffinity="1" rgba="1 0 0 0"/>
+		</body>
+
 		<body name="cart" pos="0 0 0">
 			<!-- CHANGE RANGE WITH THE CONFIG.PY!!!!!! -->
 			<joint axis="1 0 0" limited="true" name="slider" pos="0 0 0" range="-2.4 2.4" type="slide"/>
-			<geom name="cart" pos="0 0 0" size="0.1 0.05 0.02" type="box" mass="1"/>
+			<geom name="cart" pos="0 0 0" size="0.1 0.05 0.02" type="box" mass="1" contype="1" conaffinity="1"/>
 			<body name="pole" pos="0 0 0">
 				<joint axis="0 1 0" name="hinge" pos="0 0 0" type="hinge" limited="false"/>
 				<!-- CHANGE LENGTH AND MASS WITH THE CONFIG.PY!!!!!! -->
-				<geom fromto="0 0 0 0.001 0 1.0" name="pole" size="0.049" mass="0.2" type="capsule"/>
+				<geom fromto="0 0 0 0.001 0 1.0" name="pole" size="0.049" mass="0.2" type="capsule" contype="1" conaffinity="1"/>
 			</body>
 		</body>
 	</worldbody>
