@@ -27,6 +27,30 @@ def _rgb(t: tuple) -> QColor:
     return QColor(*t)
 
 
+def _draw_rounded_rect_shadow(
+    painter: QPainter,
+    rect: QRectF,
+    radius_px: float,
+    spread: float,
+    layers: int = 8,
+) -> None:
+    """Draw a layered soft drop shadow for a rounded rectangle.
+
+    Paints ``layers`` semi-transparent rounded rects that grow from the
+    rect outward.  The outermost layer always ends exactly at ``spread``
+    pixels from ``rect``, regardless of ``layers``; more layers just pack
+    them more densely together within that same spread distance.
+    """
+    painter.setPen(QPen(Qt.PenStyle.NoPen))
+    for i in range(layers, 0, -1):
+        t = i / layers                      # 1.0 (outermost) → 1/layers (innermost)
+        alpha = int(10 * (1 - t) * t * 4)  # bell-curve alpha, peak in the middle
+        expand = spread * t
+        shadow_rect = rect.adjusted(-expand, -expand, expand, expand)
+        painter.setBrush(QBrush(QColor(0, 0, 0, alpha)))
+        painter.drawRoundedRect(shadow_rect, radius_px + expand, radius_px + expand)
+
+
 class SimulationWidget(QGraphicsObject):
     """Rounded-rect widget that visually contains the track, cart, and pendulums.
 
@@ -81,18 +105,7 @@ class SimulationWidget(QGraphicsObject):
         # Layered semi-transparent rounded rects approximate a soft drop shadow
         # without using QGraphicsDropShadowEffect (which forces a full offscreen
         # re-render every frame when any child item changes position).
-        layers = 8
-        spread = self._shadow_spread
-        painter.setPen(QPen(Qt.PenStyle.NoPen))
-        for i in range(layers, 0, -1):
-            t = i / layers                          # 1.0 (outermost) → 0.125 (innermost)
-            alpha = int(10 * (1 - t) * t * 4)     # bell-curve alpha peak in the middle
-            expand = spread * t
-            shadow_rect = self._rect.adjusted(-expand * 0.4, -expand * 0.4,
-                                               expand * 0.4,  expand * 0.4)
-            painter.setBrush(QBrush(QColor(0, 0, 0, alpha)))
-            painter.drawRoundedRect(shadow_rect, radius_px + expand * 0.4,
-                                                  radius_px + expand * 0.4)
+        _draw_rounded_rect_shadow(painter, self._rect, radius_px, self._shadow_spread)
 
         # --- Widget background + themed outline ---
         pen = QPen(_rgb(v.widget_theme_color), v.widget_outline_width * v.scale)
