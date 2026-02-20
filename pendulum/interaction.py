@@ -63,7 +63,7 @@ class ForceCircleController:
             return
         
         mouse_x, mouse_y = mouse_pos
-        radius = self.v.force_circle_radius
+        radius = int(self.v.force_circle_radius * self.v.scale)
         thickness = self.v.force_circle_thickness
         color = self.v.force_circle_color
         
@@ -97,11 +97,13 @@ class CartDragController:
         # Get current cart pixel position for hit testing
         state = self.env._state
         current_cart_x_px = cx + int(state[0] * self.v.scale)
+        cart_w_px = int(self.v.cart_width  * self.v.scale)
+        cart_h_px = int(self.v.cart_height * self.v.scale)
         cart_hitbox = pygame.Rect(
-            current_cart_x_px - self.v.cart_width // 2,
-            cy - self.v.cart_height // 2,
-            self.v.cart_width,
-            self.v.cart_height
+            current_cart_x_px - cart_w_px // 2,
+            cy - cart_h_px // 2,
+            cart_w_px,
+            cart_h_px
         )
 
         is_hovering = cart_hitbox.collidepoint(mouse_pos)

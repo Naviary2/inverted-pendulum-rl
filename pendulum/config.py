@@ -12,7 +12,7 @@ class PendulumConfig:
     """Physical parameters for the multi-link pendulum on a cart."""
 
     # Cart
-    force_magnitude: float = 20          # Maximum force the cart can apply on any one frame
+    force_magnitude: float = 200          # Maximum force the cart can apply on any one frame, in Newtons.
     track_length: float = 2.4 * 2    # m (total track, cart can move ±half) - MUST MATCH XML!!!!!!
 
     fps: int = 60                    # Hz (Controls both render speed and physics timestep)
@@ -58,25 +58,25 @@ class VisualizationConfig:
     fps: int = 60
     scale: float = 250.0             # pixels per metre
 
-    track_h = 30        # Height requested
-    track_thick = 3     # Constant thickness (line width)
-    track_rad = 8       # Corner roundness (half height = full pill shape)
+    track_h: float = 0.12           # m  (track height)
+    track_thick: int = 3            # px (constant line thickness)
+    track_rad: float = 0.032        # m  (corner roundness)
 
-    cart_width: int = 80             # px
-    cart_height: int = 24            # px
-    cart_rad: int = 6              # px
-    cart_node_radius: int = 7            # px
+    cart_width: float = 0.32        # m
+    cart_height: float = 0.096      # m
+    cart_rad: float = 0.024         # m
+    cart_node_radius: float = 0.028 # m
 
-    node_radius: int = 24            # px
+    node_radius: float = 0.096      # m
     node_fill_color: tuple = (50, 160, 30)
-    node_outline_width: int = 4
+    node_outline_width: float = 0.016  # m
 
-    pendulum_width: int = 8          # px
+    pendulum_width: float = 0.032   # m
     bg_color: tuple = (35, 35, 35) # grey
     fg_color: tuple = (255, 255, 255) # white
     cart_fill_alpha: int = 128        # 0-255 transparency for cart fill
 
     # Force circle (toggled with "F" key)
-    force_circle_radius: int = 40         # px
-    force_circle_thickness: int = 4       # px
+    force_circle_radius: float = 0.16   # m
+    force_circle_thickness: int = 4     # px
     force_circle_color: tuple = (255, 0, 0)  # red
