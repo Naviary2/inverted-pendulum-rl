@@ -94,7 +94,7 @@ class VisualizationConfig:
     widget_padding_y: float = 0.25      # m  vertical padding (top / bottom)
     widget_bg_color: tuple = (35, 35, 35)  # slightly darker than bg_color
     widget_border_radius: float = 0.12  # m  corner roundness
-    widget_theme_color: tuple = (70, 140, 255)  # blue accent colour for outline
+    widget_theme_color: tuple = (70, 140, 255)  # blue accent color
     # widget_theme_color: tuple = (50, 160, 30)  # green
     widget_outline_width: float = 0.02  # m  outline stroke width
     widget_shadow_blur: float = 0.25     # m  drop-shadow blur radius
