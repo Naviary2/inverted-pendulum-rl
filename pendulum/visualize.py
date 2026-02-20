@@ -5,7 +5,7 @@
 Renders:
   • Dark background
   • White horizontal track
-  • White-outlined cart with semi-transparent fill and drop shadow
+  • White-outlined cart with semi-transparent fill
   • White pendulum rod(s) with round caps
   • White nodes at each joint / tip
 
@@ -32,7 +32,6 @@ from PySide6.QtGui import (
 )
 from PySide6.QtWidgets import (
     QApplication,
-    QGraphicsDropShadowEffect,
     QGraphicsEllipseItem,
     QGraphicsLineItem,
     QGraphicsRectItem,
@@ -67,7 +66,7 @@ def _load_model(path: str):
 # ---------------------------------------------------------------------------
 
 class CartItem(QGraphicsRectItem):
-    """Draggable cart rectangle with a drop-shadow effect.
+    """Draggable cart rectangle.
 
     The item's *local* coordinate origin is at the centre of the cart
     rectangle so that ``setPos(px, 0)`` places the cart correctly on the
@@ -103,13 +102,6 @@ class CartItem(QGraphicsRectItem):
         pen = QPen(outline_color, v.track_thick)
         pen.setJoinStyle(Qt.PenJoinStyle.RoundJoin)
         self.setPen(pen)
-
-        # Drop shadow
-        shadow = QGraphicsDropShadowEffect()
-        shadow.setBlurRadius(20)
-        shadow.setOffset(4, 4)
-        shadow.setColor(QColor(0, 0, 0, 120))
-        self.setGraphicsEffect(shadow)
 
         self.setAcceptHoverEvents(True)
         self.setCursor(Qt.CursorShape.OpenHandCursor)
