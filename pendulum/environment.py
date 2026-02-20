@@ -48,6 +48,7 @@ class CartPendulumEnv(gym.Env):
             frame_skip=self.cfg.physics_substeps,
             # This forces the inner env to respect our custom limit set in visualize.py (instead of its maximum 1000 steps)
             max_episode_steps=max_episode_steps,
+            disable_env_checker=True,
         )
 
         # Calculate the high-resolution physics timestep
@@ -136,7 +137,13 @@ class CartPendulumEnv(gym.Env):
         scaled_action = np.clip(action, -1.0, 1.0) * self.cfg.force_magnitude
 
         # 2. Step the underlying MuJoCo environment
-        mujoco_obs, reward, terminated, truncated, info = self._mujoco_env.step(scaled_action)
+        mujoco_obs, _reward, terminated, truncated, info = self._mujoco_env.step(scaled_action)
+
+        # --- Custom Reward Shaping ---
+        # Linear reward based on the angle of the pendulum. 0 when hanging down, 1 when perfectly upright.
+        theta = mujoco_obs[1]
+        theta_normalized = ((theta + np.pi) % (2 * np.pi)) - np.pi
+        reward = 1.0 - (abs(theta_normalized) / np.pi)
 
         # 3. Update the internal state for the visualizer
         self._state = mujoco_obs

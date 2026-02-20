@@ -19,6 +19,7 @@ from pathlib import Path
 from stable_baselines3 import PPO
 from stable_baselines3.common.vec_env import SubprocVecEnv
 from stable_baselines3.common.callbacks import EvalCallback
+from stable_baselines3.common.monitor import Monitor
 
 from .config import PendulumConfig, TrainingConfig
 from .environment import CartPendulumEnv
@@ -28,10 +29,12 @@ def _make_env(pendulum_cfg: PendulumConfig, max_episode_steps: int):
     """Return a callable that creates a fresh environment instance."""
 
     def _init():
-        return CartPendulumEnv(
-            pendulum_config=pendulum_cfg,
-            max_episode_steps=max_episode_steps,
-        )
+        return Monitor(
+            CartPendulumEnv(
+                pendulum_config=pendulum_cfg,
+                max_episode_steps=max_episode_steps,
+            )
+        ) 
 
     return _init
 
@@ -49,9 +52,11 @@ def train(
     vec_env = SubprocVecEnv(env_fns)
 
     # Eval environment (single process)
-    eval_env = CartPendulumEnv(
-        pendulum_config=p_cfg,
-        max_episode_steps=t_cfg.max_episode_steps,
+    eval_env = Monitor(
+        CartPendulumEnv(
+            pendulum_config=p_cfg,
+            max_episode_steps=t_cfg.max_episode_steps,
+        )
     )
 
     # Ensure save directory exists
