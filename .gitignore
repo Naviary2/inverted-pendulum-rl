@@ -209,5 +209,8 @@ __marimo__/
 # Trained models
 models/
 
+# TensorBoard logs
+logs/
+
 # Pytest
 .pytest_cache/

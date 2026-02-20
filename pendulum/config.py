@@ -52,6 +52,7 @@ class TrainingConfig:
     max_episode_steps: int = PendulumConfig.fps * int(1000 / 60)  # 1000 steps at 60 FPS
     model_save_path: str = "models/ppo_pendulum"
     model_load_path: str = ""  # Path to an existing model to continue training (empty = train from scratch)
+    tensorboard_log: str = "logs/tensorboard"  # Directory for TensorBoard logs (empty = disabled)
 
 
 @dataclass
