@@ -94,6 +94,8 @@ class PendulumWindow(QMainWindow):
     def keyPressEvent(self, event: QKeyEvent):
         if event.key() == Qt.Key.Key_R:
             self.obs, _ = self.env.reset()
+            self._warming_up = True
+            QTimer.singleShot(500, self._end_warmup)
         elif event.key() == Qt.Key.Key_F:
             self._scene._force_circle.toggle()
             # Sync force circle to current cursor position immediately
