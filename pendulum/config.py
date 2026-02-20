@@ -89,3 +89,12 @@ class VisualizationConfig:
 
     # Cart lock (toggled with "G" key)
     cart_locked_wheel_tint: tuple = (0, 0, 0, 100)  # semi-transparent black overlay
+
+    # Simulation widget (rounded-rect container for track / cart / pendulums)
+    widget_padding_x: float = 0.25      # m  horizontal padding (left / right)
+    widget_padding_y: float = 0.25      # m  vertical padding (top / bottom)
+    widget_bg_color: tuple = (25, 25, 25)  # slightly darker than bg_color
+    widget_border_radius: float = 0.12  # m  corner roundness
+    widget_theme_color: tuple = (70, 140, 255)  # blue accent colour for outline
+    widget_outline_width: float = 0.012  # m  outline stroke width
+    widget_shadow_blur: float = 0.2     # m  drop-shadow blur radius
