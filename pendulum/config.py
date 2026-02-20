@@ -80,7 +80,7 @@ class VisualizationConfig:
     node_outline_width: float = 0.022 # m
 
     pendulum_width: float = 0.045 # m
-    bg_color: tuple = (35, 35, 35) # grey
+    bg_color: tuple = (50, 50, 50) # grey
     fg_color: tuple = (255, 255, 255) # white
 
     # Force circle (toggled with "F" key)
@@ -91,10 +91,10 @@ class VisualizationConfig:
     cart_locked_wheel_tint: tuple = (0, 0, 0, 100)  # semi-transparent black overlay
 
     # Simulation widget (rounded-rect container for track / cart / pendulums)
-    widget_padding_x: float = 0.25      # m  horizontal padding (left / right)
-    widget_padding_y: float = 0.25      # m  vertical padding (top / bottom)
-    widget_bg_color: tuple = (25, 25, 25)  # slightly darker than bg_color
+    widget_padding_x: float = 1.0      # m  horizontal padding (left / right)
+    widget_padding_y: float = 0.5      # m  vertical padding (top / bottom)
+    widget_bg_color: tuple = (35, 35, 35)  # slightly darker than bg_color
     widget_border_radius: float = 0.12  # m  corner roundness
     widget_theme_color: tuple = (70, 140, 255)  # blue accent colour for outline
-    widget_outline_width: float = 0.012  # m  outline stroke width
+    widget_outline_width: float = 0.02  # m  outline stroke width
     widget_shadow_blur: float = 0.2     # m  drop-shadow blur radius

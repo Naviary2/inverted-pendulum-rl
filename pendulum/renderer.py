@@ -34,13 +34,13 @@ class SimulationWidget(QGraphicsObject):
     """Rounded-rect widget that visually contains the track, cart, and pendulums.
 
     Constants (all lengths in metres):
-        widget_padding_x      – left / right padding inside the rounded rect
-        widget_padding_y      – top / bottom padding inside the rounded rect
-        widget_bg_color       – background fill colour (slightly darker than scene bg)
-        widget_border_radius  – corner radius of the rounded rect
-        widget_theme_color    – outline / accent colour
-        widget_outline_width  – stroke width of the outline
-        widget_shadow_blur    – blur radius of the drop shadow
+        widget_padding_x      - left / right padding inside the rounded rect
+        widget_padding_y      - top / bottom padding inside the rounded rect
+        widget_bg_color       - background fill colour (slightly darker than scene bg)
+        widget_border_radius  - corner radius of the rounded rect
+        widget_theme_color    - outline / accent colour
+        widget_outline_width  - stroke width of the outline
+        widget_shadow_blur    - blur radius of the drop shadow
     """
 
     def __init__(self, p_cfg, v, parent=None):
@@ -56,14 +56,12 @@ class SimulationWidget(QGraphicsObject):
             + v.widget_padding_x
         ) * v.scale
 
-        # Widget top edge: total pendulum height above cart + v-padding
-        total_link_len = sum(p_cfg.link_lengths)
+        # Widget top edge: total pendulum height above cart + node width + v-padding
+        total_link_len = sum(p_cfg.link_lengths) + p_cfg.node_radius
         top = -(total_link_len + v.widget_padding_y) * v.scale
 
-        # Widget bottom edge: approximate strut-tip position + v-padding
-        cos_a = math.cos(math.radians(abs(v.cart_strut_angle)))
-        cart_bottom_m = v.cart_strut_center_y + v.cart_strut_height / 2 * cos_a
-        bottom = (cart_bottom_m + v.widget_padding_y) * v.scale
+        # Widget bottom edge: total pendulum height below cart + node width + v-padding
+        bottom = -top
 
         self._rect = QRectF(-half_w, top, 2 * half_w, bottom - top)
 
