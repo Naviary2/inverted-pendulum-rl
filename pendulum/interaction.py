@@ -114,7 +114,7 @@ class CartItem(QGraphicsRectItem):
         self._mujoco_data = env._mujoco_env.unwrapped.data
 
         fg = _rgb(v.fg_color)            # white
-        node_color = _rgb(v.node_fill_color)
+        node_color = _rgb(v.widget_theme_color)
 
         # Cart body: white fill, no border
         self.setBrush(QBrush(fg))

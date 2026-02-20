@@ -144,7 +144,7 @@ class PendulumScene(QGraphicsScene):
 
             # inner node
             inner = QGraphicsEllipseItem(-node_inner, -node_inner, 2 * node_inner, 2 * node_inner, self._widget)
-            inner.setBrush(QBrush(_rgb(v.node_fill_color)))
+            inner.setBrush(QBrush(_rgb(v.widget_theme_color)))
             inner.setPen(QPen(Qt.PenStyle.NoPen))
             self._nodes_inner.append(inner)
 
