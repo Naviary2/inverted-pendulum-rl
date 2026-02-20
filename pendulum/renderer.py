@@ -45,7 +45,7 @@ class PendulumScene(QGraphicsScene):
         # --- Track ---
         # Width: physics track length + one full cart body width for visual margin
         body_w_px = v.cart_body_width * v.scale
-        track_len = p_cfg.track_length * v.scale + body_w_px
+        track_len = p_cfg.track_length * v.scale + body_w_px * 1.6 # plus some constant for padding
         track_h = v.track_h * v.scale
         track_path = QPainterPath()
         track_rad_px = v.track_rad * v.scale
