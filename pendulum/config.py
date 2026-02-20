@@ -13,7 +13,7 @@ class PendulumConfig:
 
     # Cart
     force_magnitude: float = 200          # Maximum force the cart can apply on any one frame, in Newtons.
-    track_length: float = 2.4 * 2    # m (total track, cart can move ±half)
+    track_length: float = 2.5 * 2    # m (total track, cart can move ±half)
 
     # fps: int = 60                    # Hz (Controls both render speed and physics timestep)
     fps: int = 240                    # Hz (Controls both render speed and physics timestep)
@@ -98,7 +98,7 @@ class VisualizationConfig:
 
     # Tick ruler (graduated markings below the track)
     tick_range: int = 3              # whole-meter radius of the ruler (draws ±tick_range)
-    tick_gap: float = 0.04          # m  gap between track bottom edge and first tick
+    tick_gap: float = 0.3          # m  gap between track bottom edge and first tick
     tick_int_height: float = 0.13   # m  height of integer ticks
     tick_half_height: float = 0.09  # m  height of half-integer ticks
     tick_tenth_height: float = 0.055  # m  height of tenth-step ticks
