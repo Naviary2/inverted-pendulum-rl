@@ -131,7 +131,7 @@ class ForceCircleItem(QGraphicsEllipseItem):
         body_id = mujoco.mj_name2id(mujoco_model, mujoco.mjtObj.mjOBJ_BODY, "force_circle_mocap")
         self._mocap_index = mujoco_model.body_mocapid[body_id]
 
-        pen = QPen(_rgb(v.force_circle_color), v.force_circle_thickness)
+        pen = QPen(_rgb(v.force_circle_color), v.force_circle_thickness * v.scale)
         self.setPen(pen)
         self.setBrush(Qt.BrushStyle.NoBrush)
         self.setVisible(False)

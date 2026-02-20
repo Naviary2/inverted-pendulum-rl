@@ -80,7 +80,7 @@ class VisualizationConfig:
     cart_fill_alpha: int = 128        # 0-255 transparency for cart fill
 
     # Force circle (toggled with "F" key)
-    force_circle_thickness: int = 4     # px
+    force_circle_thickness: float = 0.016  # m
     force_circle_color: tuple = (255, 0, 0)  # red
 
     # Cart lock (toggled with "G" key)
