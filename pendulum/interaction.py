@@ -153,14 +153,21 @@ class CartItem(QGraphicsRectItem):
             Qt.TransformationMode.SmoothTransformation,
         )
         
-        # Create a darkened version of the wheel pixmap for the locked state
-        dark_pixmap = wheel_pixmap.copy()
-        painter = QPainter(dark_pixmap)
-        painter.setCompositionMode(QPainter.CompositionMode.CompositionMode_SourceAtop)
-        painter.fillRect(dark_pixmap.rect(), _rgb(v.cart_locked_wheel_tint))
-        painter.end()
-        self._normal_wheel_pixmap = wheel_pixmap
-        self._locked_wheel_pixmap = dark_pixmap
+        # Create darkened versions of the wheel pixmaps for the locked state
+        dark_pixmap_top = wheel_pixmap_top.copy()
+        painter_top = QPainter(dark_pixmap_top)
+        painter_top.setCompositionMode(QPainter.CompositionMode.CompositionMode_SourceAtop)
+        painter_top.fillRect(dark_pixmap_top.rect(), _rgb(v.cart_locked_wheel_tint))
+        painter_top.end()
+        dark_pixmap_bottom = wheel_pixmap_bottom.copy()
+        painter_bottom = QPainter(dark_pixmap_bottom)
+        painter_bottom.setCompositionMode(QPainter.CompositionMode.CompositionMode_SourceAtop)
+        painter_bottom.fillRect(dark_pixmap_bottom.rect(), _rgb(v.cart_locked_wheel_tint))
+        painter_bottom.end()
+        self._normal_wheel_pixmap_top = wheel_pixmap_top
+        self._locked_wheel_pixmap_top = dark_pixmap_top
+        self._normal_wheel_pixmap_bottom = wheel_pixmap_bottom
+        self._locked_wheel_pixmap_bottom = dark_pixmap_bottom
 
         # Each entry is (pixmap_item, wheel_radius_in_metres, spin_direction).
         # spin_direction is +1 for top wheels (contact at wheel bottom → clockwise)
@@ -269,13 +276,15 @@ class CartItem(QGraphicsRectItem):
         if self.is_locked:
             self._mujoco_data.mocap_pos[0, 0] = self._mujoco_data.qpos[0]
             self._mujoco_data.eq_active = 1
-            for w in self._wheels:
-                w.setPixmap(self._locked_wheel_pixmap)
+            for w, rad_m, direction in self._wheels:
+                pm = self._locked_wheel_pixmap_top if direction == +1 else self._locked_wheel_pixmap_bottom
+                w.setPixmap(pm)
         else:
             if not self.is_dragging:
                 self._mujoco_data.eq_active = 0
-            for w in self._wheels:
-                w.setPixmap(self._normal_wheel_pixmap)
+            for w, rad_m, direction in self._wheels:
+                pm = self._normal_wheel_pixmap_top if direction == +1 else self._normal_wheel_pixmap_bottom
+                w.setPixmap(pm)
 
 
 class ForceCircleItem(QGraphicsEllipseItem):
