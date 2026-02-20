@@ -18,6 +18,7 @@
 
 		<!-- Force circle: a mocap body that follows the mouse and collides with other bodies -->
 		<!-- The radius (0.12m) corresponds to 30px at scale=250 pixels/meter -->
+		<!-- The rgba alpha is 0 because rendering is done separately in pygame, not by MuJoCo -->
 		<body name="force_circle_mocap" mocap="true" pos="0 0 100">
 			<geom name="force_circle" type="sphere" size="0.12" contype="1" conaffinity="1" rgba="1 0 0 0"/>
 		</body>

@@ -22,11 +22,14 @@ class ForceCircleController:
         self.is_active = False
         
         # Access internal MuJoCo handles for direct manipulation
+        self.mujoco_model = env._mujoco_env.unwrapped.model
         self.mujoco_data = env._mujoco_env.unwrapped.data
         
-        # Find the index of the force_circle_mocap body in mocap arrays
-        # The force_circle_mocap is the second mocap body (index 1)
-        self._mocap_index = 1
+        # Look up the mocap body index by name for robustness
+        import mujoco
+        body_id = mujoco.mj_name2id(self.mujoco_model, mujoco.mjtObj.mjOBJ_BODY, "force_circle_mocap")
+        # Find the mocap index for this body
+        self._mocap_index = self.mujoco_model.body_mocapid[body_id]
 
     def update(self, events: list, mouse_pos: tuple, cx: int, cy: int) -> None:
         """
