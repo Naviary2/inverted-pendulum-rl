@@ -43,9 +43,9 @@ class PendulumScene(QGraphicsScene):
         fg = _rgb(v.fg_color)
 
         # --- Track ---
-        cart_w_px = v.cart_width * v.scale
-        cart_node_px = v.cart_node_radius * v.scale
-        track_len = p_cfg.track_length * v.scale + cart_w_px + cart_node_px
+        # Width: physics track length + one full cart body width for visual margin
+        body_w_px = v.cart_body_width_nd * 2 * p_cfg.node_radius * v.scale
+        track_len = p_cfg.track_length * v.scale + body_w_px
         track_h = v.track_h * v.scale
         self._track = QGraphicsRectItem(-track_len / 2, -track_h / 2, track_len, track_h)
         pen_track = QPen(fg, v.track_thick)
@@ -53,16 +53,13 @@ class PendulumScene(QGraphicsScene):
         self._track.setBrush(Qt.BrushStyle.NoBrush)
         self.addItem(self._track)
 
-        # --- Cart ---
+        # --- Cart (body + struts + wheels + pivot node all in one item) ---
         self._cart = CartItem(env, p_cfg, v)
         self.addItem(self._cart)
 
-        # --- Cart pivot node ---
-        cnr = v.cart_node_radius * v.scale
-        self._cart_node = QGraphicsEllipseItem(-cnr, -cnr, 2 * cnr, 2 * cnr)
-        self._cart_node.setBrush(QBrush(fg))
-        self._cart_node.setPen(QPen(Qt.PenStyle.NoPen))
-        self.addItem(self._cart_node)
+        # Track the previous cart x position so we can compute delta for wheel rotation.
+        # None on the first frame to avoid a large spurious rotation.
+        self._prev_cart_x: float | None = None
 
         # --- Pendulum links (lines) and tip nodes ---
         n = p_cfg.num_links
@@ -107,8 +104,13 @@ class PendulumScene(QGraphicsScene):
         p_cfg = self.p_cfg
         cart_px = state[0] * v.scale
 
+        # Move cart and rotate wheels by how much the cart has moved this frame.
+        # Skip rotation on the first frame to avoid a spurious jump from 0.
+        if self._prev_cart_x is not None:
+            delta_x_meters = state[0] - self._prev_cart_x
+            self._cart.rotate_wheels(delta_x_meters)
+        self._prev_cart_x = state[0]
         self._cart.setPos(cart_px, 0)
-        self._cart_node.setPos(cart_px, 0)
 
         pivot_x, pivot_y = cart_px, 0.0
 

@@ -62,14 +62,15 @@ class VisualizationConfig:
     fps: int = 60
     scale: float = 250.0             # pixels per metre
 
-    track_h: float = 0.12           # m  (track height)
-    track_thick: int = 3            # px (constant line thickness)
+    track_h: float = 0.06           # m  (track height, ~half the original)
+    track_thick: int = 5            # px (constant line thickness, ~50% thicker than original)
     track_rad: float = 0.032        # m  (corner roundness)
 
-    cart_width: float = 0.32        # m
-    cart_height: float = 0.096      # m
-    cart_rad: float = 0.024         # m
-    cart_node_radius: float = 0.028 # m
+    # Cart body (white rectangle behind pivot node)
+    cart_body_width_nd: float = 3.0     # body width in node diameters (nd)
+    # Strut rectangles on the left and right sides of the cart body
+    cart_strut_width_frac: float = 2 / 3  # strut width as a fraction of track height
+    cart_strut_height_nd: float = 2.0   # strut height in node diameters
 
     node_fill_color: tuple = (50, 160, 30)
     node_outline_width: float = 0.016  # m
@@ -77,7 +78,6 @@ class VisualizationConfig:
     pendulum_width: float = 0.032   # m
     bg_color: tuple = (35, 35, 35) # grey
     fg_color: tuple = (255, 255, 255) # white
-    cart_fill_alpha: int = 128        # 0-255 transparency for cart fill
 
     # Force circle (toggled with "F" key)
     force_circle_thickness: int = 4     # px
