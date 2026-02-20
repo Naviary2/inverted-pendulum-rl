@@ -113,6 +113,8 @@ class CartItem(QGraphicsRectItem):
             self.is_dragging = True
             self._mujoco_data.eq_active = 1
             self.setCursor(Qt.CursorShape.ClosedHandCursor)
+            event.accept()
+            return
         super().mousePressEvent(event)
 
     def mouseMoveEvent(self, event):
@@ -122,6 +124,8 @@ class CartItem(QGraphicsRectItem):
             half_track = self.p_cfg.track_length / 2.0
             target_x = float(np.clip(target_x, -half_track, half_track))
             self._mujoco_data.mocap_pos[0, 0] = target_x
+            event.accept()
+            return
         super().mouseMoveEvent(event)
 
     def mouseReleaseEvent(self, event):
@@ -129,6 +133,8 @@ class CartItem(QGraphicsRectItem):
             self.is_dragging = False
             self._mujoco_data.eq_active = 0
             self.setCursor(Qt.CursorShape.OpenHandCursor)
+            event.accept()
+            return
         super().mouseReleaseEvent(event)
 
 
