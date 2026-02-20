@@ -17,17 +17,13 @@ Usage:
 from __future__ import annotations
 
 import argparse
-import asyncio
 import sys
-import time
-from concurrent.futures import ThreadPoolExecutor
 
 import numpy as np
 
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QKeyEvent
 from PySide6.QtWidgets import QApplication, QMainWindow
-import PySide6.QtAsyncio as QtAsyncio
 
 from .config import PendulumConfig, TrainingConfig, VisualizationConfig
 from .environment import CartPendulumEnv
@@ -51,16 +47,18 @@ def _load_model(path: str):
 # ---------------------------------------------------------------------------
 
 class PendulumWindow(QMainWindow):
-    """Main window that hosts the simulation view."""
+    """Main window that hosts the simulation view and drives the timer loop."""
 
     def __init__(
         self,
         env: CartPendulumEnv,
+        model,
         p_cfg: PendulumConfig,
         v: VisualizationConfig,
     ):
         super().__init__()
         self.env = env
+        self.model = model
         self.p_cfg = p_cfg
         self.v = v
 
@@ -77,6 +75,13 @@ class PendulumWindow(QMainWindow):
         # Initial sync
         self._scene.sync_from_state(env._state)
 
+        # Timer at config fps
+        self._timer = QTimer(self)
+        interval_ms = max(1, int(1000 / p_cfg.fps))
+        self._timer.setInterval(interval_ms)
+        self._timer.timeout.connect(self._tick)
+        self._timer.start()
+
     # -- key handling -------------------------------------------------------
 
     def keyPressEvent(self, event: QKeyEvent):
@@ -90,60 +95,24 @@ class PendulumWindow(QMainWindow):
             self._scene._force_circle.update_position(scene_pos.x(), scene_pos.y())
         super().keyPressEvent(event)
 
+    # -- simulation tick ----------------------------------------------------
 
-# ---------------------------------------------------------------------------
-# Async simulation loop
-# ---------------------------------------------------------------------------
+    def _tick(self):
+        cart = self._scene._cart
 
-async def _async_run(window: PendulumWindow, model, p_cfg: PendulumConfig):
-    """Async main loop with drift-free timing."""
-    env = window.env
-    loop = asyncio.get_running_loop()
-    frame_duration = 1.0 / p_cfg.fps
-    next_frame_target = time.perf_counter() + frame_duration
+        if cart.is_dragging:
+            action = np.array([0.0], dtype=np.float32)
+        elif self.model is not None:
+            action, _ = self.model.predict(self.obs, deterministic=True)
+        else:
+            action = np.array([0.0])
 
-    # Thread pool for model prediction so it doesn't block the UI
-    executor = ThreadPoolExecutor(max_workers=1)
+        self.obs, _reward, terminated, truncated, _ = self.env.step(action)
 
-    try:
-        while True:
-            # --- Drift-free framerate limiter ---
-            now = time.perf_counter()
-            delay = next_frame_target - now
-            if delay > 0:
-                await asyncio.sleep(delay)
-            # Advance target by a fixed step to maintain constant cadence
-            next_frame_target += frame_duration
-            # If we fell behind by more than one frame, re-anchor to avoid
-            # a burst of catch-up frames
-            now = time.perf_counter()
-            if next_frame_target < now:
-                next_frame_target = now + frame_duration
+        if (terminated or truncated) and not cart.is_dragging:
+            self.obs, _ = self.env.reset()
 
-            # --- action ---
-            cart = window._scene._cart
-
-            if cart.is_dragging:
-                action = np.array([0.0], dtype=np.float32)
-            elif model is not None:
-                action, _ = await loop.run_in_executor(
-                    executor, model.predict, window.obs, True
-                )
-            else:
-                action = np.array([0.0])
-
-            window.obs, _reward, terminated, truncated, _ = env.step(action)
-
-            if (terminated or truncated) and not cart.is_dragging:
-                window.obs, _ = env.reset()
-
-            # --- sync scene items to physics state ---
-            window._scene.sync_from_state(env._state)
-
-            # Explicitly trigger a repaint so the view updates this frame
-            window._view.viewport().update()
-    finally:
-        executor.shutdown(wait=False)
+        self._scene.sync_from_state(self.env._state)
 
 
 # ---------------------------------------------------------------------------
@@ -164,11 +133,9 @@ def run(
     model = _load_model(model_path)
 
     app = QApplication.instance() or QApplication(sys.argv)
-    window = PendulumWindow(env, p_cfg, v)
+    window = PendulumWindow(env, model, p_cfg, v)
     window.show()
-
-    # QtAsyncio.run() drives both the Qt and asyncio event loops
-    QtAsyncio.run(_async_run(window, model, p_cfg), keep_running=True)
+    sys.exit(app.exec())
 
 
 # ---- CLI entry point -------------------------------------------------------
