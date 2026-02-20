@@ -20,6 +20,7 @@ import argparse
 import asyncio
 import sys
 import time
+from concurrent.futures import ThreadPoolExecutor
 
 import numpy as np
 
@@ -95,36 +96,54 @@ class PendulumWindow(QMainWindow):
 # ---------------------------------------------------------------------------
 
 async def _async_run(window: PendulumWindow, model, p_cfg: PendulumConfig):
-    """Async main loop — mirrors the original asyncio timing approach."""
+    """Async main loop with drift-free timing."""
     env = window.env
-    limit_frame_duration = 1.0 / p_cfg.fps
-    next_frame_target = 0.0
+    loop = asyncio.get_running_loop()
+    frame_duration = 1.0 / p_cfg.fps
+    next_frame_target = time.perf_counter() + frame_duration
 
-    while True:
-        # --- Framerate limiter (same strategy as original Pygame version) ---
-        this_frame = time.time()
-        delay = next_frame_target - this_frame
-        if delay > 0:
-            await asyncio.sleep(delay)
-        next_frame_target = time.time() + limit_frame_duration
+    # Thread pool for model prediction so it doesn't block the UI
+    executor = ThreadPoolExecutor(max_workers=1)
 
-        # --- action ---
-        cart = window._scene._cart
+    try:
+        while True:
+            # --- Drift-free framerate limiter ---
+            now = time.perf_counter()
+            delay = next_frame_target - now
+            if delay > 0:
+                await asyncio.sleep(delay)
+            # Advance target by a fixed step to maintain constant cadence
+            next_frame_target += frame_duration
+            # If we fell behind by more than one frame, re-anchor to avoid
+            # a burst of catch-up frames
+            now = time.perf_counter()
+            if next_frame_target < now:
+                next_frame_target = now + frame_duration
 
-        if cart.is_dragging:
-            action = np.array([0.0], dtype=np.float32)
-        elif model is not None:
-            action, _ = model.predict(window.obs, deterministic=True)
-        else:
-            action = np.array([0.0])
+            # --- action ---
+            cart = window._scene._cart
 
-        window.obs, _reward, terminated, truncated, _ = env.step(action)
+            if cart.is_dragging:
+                action = np.array([0.0], dtype=np.float32)
+            elif model is not None:
+                action, _ = await loop.run_in_executor(
+                    executor, model.predict, window.obs, True
+                )
+            else:
+                action = np.array([0.0])
 
-        if (terminated or truncated) and not cart.is_dragging:
-            window.obs, _ = env.reset()
+            window.obs, _reward, terminated, truncated, _ = env.step(action)
 
-        # --- sync scene items to physics state ---
-        window._scene.sync_from_state(env._state)
+            if (terminated or truncated) and not cart.is_dragging:
+                window.obs, _ = env.reset()
+
+            # --- sync scene items to physics state ---
+            window._scene.sync_from_state(env._state)
+
+            # Explicitly trigger a repaint so the view updates this frame
+            window._view.viewport().update()
+    finally:
+        executor.shutdown(wait=False)
 
 
 # ---------------------------------------------------------------------------
