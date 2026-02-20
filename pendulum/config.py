@@ -83,5 +83,9 @@ class VisualizationConfig:
     force_circle_thickness: float = 0.016  # m
     force_circle_color: tuple = (255, 0, 0)  # red
 
+    # Strut tilt: each strut is rotated this many degrees toward the cart centre
+    # (tops lean inward, bottoms lean outward)
+    cart_strut_angle: float = 20.0
+
     # Cart lock (toggled with "G" key)
     cart_locked_color: tuple = (220, 150, 0)  # amber
