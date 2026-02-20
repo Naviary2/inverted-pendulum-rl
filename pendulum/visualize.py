@@ -17,6 +17,7 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import signal
 import sys
 
 import numpy as np
@@ -151,6 +152,18 @@ def run(
     model = _load_model(model_path)
 
     app = QApplication.instance() or QApplication(sys.argv)
+
+    # Allow Ctrl+C (SIGINT) in the terminal to close the Qt window gracefully.
+    # Qt's event loop blocks Python signal handling, so a short timer is used
+    # to periodically yield back to Python so the signal can be dispatched.
+    def _handle_sigint(*_):
+        app.quit()
+
+    signal.signal(signal.SIGINT, _handle_sigint)
+    _sigint_timer = QTimer(app)
+    _sigint_timer.start(500)
+    _sigint_timer.timeout.connect(lambda: None)
+
     window = PendulumWindow(env, model, p_cfg, v)
     window.show()
     sys.exit(app.exec())
