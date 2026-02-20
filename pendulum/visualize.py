@@ -337,8 +337,9 @@ class PendulumWindow(QMainWindow):
         # Initial sync
         self._scene.sync_from_state(env._state)
 
-        # Timer at config fps
+        # Timer at config fps with precise timing to avoid frame skipping
         self._timer = QTimer(self)
+        self._timer.setTimerType(Qt.TimerType.PreciseTimer)
         interval_ms = max(1, int(1000 / p_cfg.fps))
         self._timer.setInterval(interval_ms)
         self._timer.timeout.connect(self._tick)
