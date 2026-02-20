@@ -14,7 +14,6 @@ import gymnasium as gym
 import numpy as np
 import os
 import tempfile
-import xml.etree.ElementTree as ET
 from gymnasium import spaces
 
 from .config import PendulumConfig
@@ -91,39 +90,26 @@ class CartPendulumEnv(gym.Env):
 
     def _create_config_xml(self, base_xml_path: str) -> str:
         """
-        Read the base MuJoCo XML and overwrite values that are defined in
-        PendulumConfig so that config.py is the single source of truth.
+        Read the base MuJoCo XML template and substitute placeholders with
+        values from PendulumConfig so that config.py is the single source of truth.
         Returns the path to a temporary XML file with the substituted values.
         """
-        tree = ET.parse(base_xml_path)
-        root = tree.getroot()
+        with open(base_xml_path, 'r') as f:
+            xml_template = f.read()
 
-        # Gravity
-        option = root.find('option')
-        option.set('gravity', f'0 0 -{self.cfg.gravity}')
-
-        # Track range (slider joint)
-        half_track = self.cfg.track_length / 2.0
-        for joint in root.iter('joint'):
-            if joint.get('name') == 'slider':
-                joint.set('range', f'-{half_track} {half_track}')
-
-        # Pole length, tip node position/size, and force circle size
-        pole_length = self.cfg.link_lengths[0]
-        for geom in root.iter('geom'):
-            name = geom.get('name')
-            if name == 'pole':
-                geom.set('fromto', f'0 0 0 0.001 0 {pole_length}')
-            elif name == 'tip_node':
-                geom.set('pos', f'0 0 {pole_length}')
-                geom.set('size', str(self.cfg.node_radius))
-            elif name == 'force_circle':
-                geom.set('size', str(self.cfg.force_circle_radius))
+        xml_content = xml_template.format(
+            gravity=self.cfg.gravity,
+            half_track=self.cfg.track_length / 2.0,
+            pole_length=self.cfg.link_lengths[0],
+            node_radius=self.cfg.node_radius,
+            force_circle_radius=self.cfg.force_circle_radius,
+        )
 
         # Write to a temporary file
         fd, tmp_path = tempfile.mkstemp(suffix='.xml')
         os.close(fd)
-        tree.write(tmp_path, xml_declaration=True)
+        with open(tmp_path, 'w') as f:
+            f.write(xml_content)
         return tmp_path
 
     def _get_obs(self) -> np.ndarray:
