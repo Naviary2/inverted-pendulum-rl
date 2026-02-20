@@ -62,15 +62,19 @@ class VisualizationConfig:
     fps: int = 60
     scale: float = 200.0 # pixels per metre
 
-    track_h: float = 0.08 # m  (track height)
+    track_h: float = 0.09 # m  (track height)
     track_thick: float = 0.02 # m (track outline thickness)
-    track_rad: float = 0.04 # m  (corner roundness)
+    track_rad: float = 0.05 # m  (corner roundness)
 
     # Cart body (white rectangle behind pivot node)
-    cart_body_width: float = 0.57
+    cart_body_width: float = 0.7
     # Strut rectangles on the left and right sides of the cart body
-    cart_strut_width: float = 0.07
-    cart_strut_height: float = 0.3
+    cart_strut_width: float = 0.08
+    cart_strut_height: float = 0.33
+    cart_strut_center_y: float = 0.013
+    # Strut tilt: each strut is rotated this many degrees toward the cart centre
+    # (tops lean inward, bottoms lean outward)
+    cart_strut_angle: float = -20.0
 
     node_fill_color: tuple = (50, 160, 30)
     node_outline_width: float = 0.022 # m
