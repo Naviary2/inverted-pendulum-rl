@@ -55,7 +55,7 @@ class TrainingConfig:
 
 @dataclass
 class VisualizationConfig:
-    """Display settings for the pygame viewer."""
+    """Display settings for the Qt viewer."""
 
     width: int = 1920
     height: int = 1080
