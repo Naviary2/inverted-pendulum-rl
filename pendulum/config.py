@@ -15,8 +15,8 @@ class PendulumConfig:
     force_magnitude: float = 200          # Maximum force the cart can apply on any one frame, in Newtons.
     track_length: float = 2.4 * 2    # m (total track, cart can move ±half)
 
-    fps: int = 60                    # Hz (Controls both render speed and physics timestep)
-    # fps: int = 240                    # Hz (Controls both render speed and physics timestep)
+    # fps: int = 60                    # Hz (Controls both render speed and physics timestep)
+    fps: int = 240                    # Hz (Controls both render speed and physics timestep)
     physics_substeps: int = 1        # How many physics step per 1 render step. Higher = more accurate physics but slower training.
 
     # Links (lists allow N-link pendulums)
