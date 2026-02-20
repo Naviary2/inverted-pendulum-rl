@@ -43,6 +43,7 @@ class CartPendulumEnv(gym.Env):
 
         # Generate a modified XML with config values as the single source of truth
         modified_xml_path = self._create_config_xml(os.path.abspath(xml_path))
+        self._tmp_xml_path = modified_xml_path
 
         # Create the underlying MuJoCo environment
         self._mujoco_env = gym.make(
@@ -198,5 +199,7 @@ class CartPendulumEnv(gym.Env):
         return self._get_obs(), reward, terminated, truncated, info
     
     def close(self):
-        """Close the underlying MuJoCo environment."""
+        """Close the underlying MuJoCo environment and clean up temp files."""
         self._mujoco_env.close()
+        if hasattr(self, '_tmp_xml_path') and os.path.exists(self._tmp_xml_path):
+            os.unlink(self._tmp_xml_path)
