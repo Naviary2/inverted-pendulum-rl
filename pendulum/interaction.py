@@ -32,9 +32,9 @@ class CartItem(QGraphicsRectItem):
     """Cart with white body, side struts, rolling wheels, and a pivot node.
 
     Visual layers (back to front):
-      1. Struts (QGraphicsRectItem, behind parent via ItemStacksBehindParent)
-      2. Cart body - the parent QGraphicsRectItem (white rectangle)
-      3. Wheels (QGraphicsPixmapItem, in front of body/struts)
+      1. Wheels (QGraphicsPixmapItem, behind struts/body via ItemStacksBehindParent + z=-1)
+      2. Struts (QGraphicsRectItem, behind parent via ItemStacksBehindParent)
+      3. Cart body - the parent QGraphicsRectItem (white rectangle)
       4. Pivot node outer circle  (white, matches pendulum-node outline)
       5. Pivot node inner circle  (coloured, matches pendulum-node fill)
 
@@ -189,6 +189,7 @@ class CartItem(QGraphicsRectItem):
             w_top.setPos(top_x - wheel_rad_top, top_y - wheel_rad_top)
             w_top.setTransformOriginPoint(wheel_rad_top, wheel_rad_top)
             w_top.setFlag(QGraphicsItem.GraphicsItemFlag.ItemStacksBehindParent, True)
+            w_top.setZValue(-1)
             w_top.setAcceptedMouseButtons(Qt.MouseButton.NoButton)
             self._wheels.append((w_top, wheel_rad_top / v.scale, +1))
             self._wheel_angles.append(0.0)
@@ -198,6 +199,7 @@ class CartItem(QGraphicsRectItem):
             w_bot.setPos(bot_x - wheel_rad_bottom, bot_y - wheel_rad_bottom)
             w_bot.setTransformOriginPoint(wheel_rad_bottom, wheel_rad_bottom)
             w_bot.setFlag(QGraphicsItem.GraphicsItemFlag.ItemStacksBehindParent, True)
+            w_bot.setZValue(-1)
             w_bot.setAcceptedMouseButtons(Qt.MouseButton.NoButton)
             self._wheels.append((w_bot, wheel_rad_bottom / v.scale, -1))
             self._wheel_angles.append(0.0)
