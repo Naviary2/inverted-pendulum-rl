@@ -67,7 +67,7 @@ class VisualizationConfig:
     track_rad: float = 0.05 # m  (corner roundness)
 
     # Cart body (white rectangle behind pivot node)
-    cart_body_width: float = 0.7
+    cart_body_width: float = 0.65
     # Strut rectangles on the left and right sides of the cart body
     cart_strut_width: float = 0.08
     cart_strut_height: float = 0.33
