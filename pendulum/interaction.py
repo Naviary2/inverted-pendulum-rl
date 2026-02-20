@@ -64,28 +64,33 @@ class CartItem(QGraphicsRectItem):
         strut_w = v.cart_strut_width * v.scale
         strut_h = v.cart_strut_height * v.scale
 
-        # Struts are angled toward the centre and their centres sit at the
-        # bottom of the cart body, so the top and bottom wheel centres end up
-        # at different distances from the two track rails → different radii.
+        # Strut centre Y position in pixels (cart-local coordinates, Qt Y-down).
+        strut_cy_px = v.cart_strut_center_y * v.scale
+
+        # Struts are angled toward the centre, so the top and bottom wheel
+        # centres end up at different distances from the two track rails →
+        # different radii.
         strut_angle_rad = math.radians(v.cart_strut_angle)
         cos_a = math.cos(strut_angle_rad)
         sin_a = math.sin(strut_angle_rad)
 
-        # Bottom wheel sits just outside the track's bottom rail.
-        #   bottom-wheel centre y = body_h/2 + strut_h/2 * cos_a
-        #   track bottom rail   y = body_h/2
-        #   radius = (body_h/2 + strut_h/2·cos_a) − body_h/2 = strut_h/2·cos_a
-        wheel_rad_bottom = strut_h / 2 * cos_a
         # Top wheel sits just outside the track's top rail.
-        #   top-wheel centre y = body_h/2 − strut_h/2·cos_a
+        #   top-wheel centre y = strut_cy_px − strut_h/2·cos_a
         #   track top rail   y = −body_h/2
-        #   radius = (−body_h/2) − (body_h/2 − strut_h/2·cos_a) = strut_h/2·cos_a − body_h
-        wheel_rad_top = strut_h / 2 * cos_a - body_h
-        if wheel_rad_top <= 0:
+        #   radius = (−body_h/2) − (strut_cy_px − strut_h/2·cos_a)
+        #          = strut_h/2·cos_a − strut_cy_px − body_h/2
+        wheel_rad_top = strut_h / 2 * cos_a - strut_cy_px - body_h / 2
+        # Bottom wheel sits just outside the track's bottom rail.
+        #   bottom-wheel centre y = strut_cy_px + strut_h/2·cos_a
+        #   track bottom rail   y = body_h/2
+        #   radius = (strut_cy_px + strut_h/2·cos_a) − body_h/2
+        wheel_rad_bottom = strut_cy_px + strut_h / 2 * cos_a - body_h / 2
+        if wheel_rad_top <= 0 or wheel_rad_bottom <= 0:
             raise ValueError(
-                f"Top wheel radius is non-positive ({wheel_rad_top:.2f} px). "
-                "Increase cart_strut_height or reduce track_h so that "
-                "strut_height/2 * cos(strut_angle) > cart_body_height (= track_height)."
+                f"Wheel radius is non-positive (top={wheel_rad_top:.2f} px, "
+                f"bottom={wheel_rad_bottom:.2f} px). "
+                "Adjust cart_strut_center_y, cart_strut_height, or track_h so that "
+                "both wheel radii are positive."
             )
 
         # ------------------------------------------------------------------
@@ -100,7 +105,7 @@ class CartItem(QGraphicsRectItem):
         self.is_locked = False
 
         # Wheel rotation is tracked per-wheel in rotate_wheels.
-        # Each entry in _wheels is (pixmap_item, wheel_radius_in_metres).
+        # Each entry in _wheels is (pixmap_item, wheel_radius_in_metres, spin_direction).
         # _wheel_angles stores the current accumulated rotation (degrees) for each wheel.
 
         # MuJoCo data handle
@@ -118,7 +123,7 @@ class CartItem(QGraphicsRectItem):
         # ------------------------------------------------------------------
         for sign in (-1, 1):
             strut = QGraphicsRectItem(-strut_w / 2, -strut_h / 2, strut_w, strut_h, self)
-            strut.setPos(sign * (body_w / 2), body_h / 2)  # centre on bottom of cart body
+            strut.setPos(sign * (body_w / 2), strut_cy_px)  # centre at cart_strut_center_y
             strut.setRotation(-sign * v.cart_strut_angle)   # tilt tops toward centre
             strut.setBrush(QBrush(fg))
             strut.setPen(QPen(Qt.PenStyle.NoPen))
@@ -146,8 +151,10 @@ class CartItem(QGraphicsRectItem):
             Qt.TransformationMode.SmoothTransformation,
         )
 
-        # Each entry is (pixmap_item, wheel_radius_in_metres); see _wheel_angles.
-        self._wheels: list[tuple[QGraphicsPixmapItem, float]] = []
+        # Each entry is (pixmap_item, wheel_radius_in_metres, spin_direction).
+        # spin_direction is +1 for top wheels (contact at wheel bottom → clockwise)
+        # and -1 for bottom wheels (contact at wheel top → counter-clockwise).
+        self._wheels: list[tuple[QGraphicsPixmapItem, float, int]] = []
         self._wheel_angles: list[float] = []   # accumulated rotation per wheel (degrees)
         for sx in (-1, 1):                          # left / right strut
             strut_cx = sx * (body_w / 2)
@@ -155,9 +162,9 @@ class CartItem(QGraphicsRectItem):
             #   top end  (0, −strut_h/2) rotated by −sx·angle about strut centre
             #   bot end  (0, +strut_h/2) rotated by −sx·angle about strut centre
             top_x = strut_cx - sx * strut_h / 2 * sin_a
-            top_y = body_h / 2 - strut_h / 2 * cos_a
+            top_y = strut_cy_px - strut_h / 2 * cos_a
             bot_x = strut_cx + sx * strut_h / 2 * sin_a
-            bot_y = body_h / 2 + strut_h / 2 * cos_a
+            bot_y = strut_cy_px + strut_h / 2 * cos_a
 
             w_top = QGraphicsPixmapItem(wheel_pixmap_top, self)
             # Position so that the pixmap centre is at (top_x, top_y)
@@ -165,7 +172,7 @@ class CartItem(QGraphicsRectItem):
             w_top.setTransformOriginPoint(wheel_rad_top, wheel_rad_top)
             w_top.setFlag(QGraphicsItem.GraphicsItemFlag.ItemStacksBehindParent, True)
             w_top.setAcceptedMouseButtons(Qt.MouseButton.NoButton)
-            self._wheels.append((w_top, wheel_rad_top / v.scale))
+            self._wheels.append((w_top, wheel_rad_top / v.scale, +1))
             self._wheel_angles.append(0.0)
 
             w_bot = QGraphicsPixmapItem(wheel_pixmap_bottom, self)
@@ -174,7 +181,7 @@ class CartItem(QGraphicsRectItem):
             w_bot.setTransformOriginPoint(wheel_rad_bottom, wheel_rad_bottom)
             w_bot.setFlag(QGraphicsItem.GraphicsItemFlag.ItemStacksBehindParent, True)
             w_bot.setAcceptedMouseButtons(Qt.MouseButton.NoButton)
-            self._wheels.append((w_bot, wheel_rad_bottom / v.scale))
+            self._wheels.append((w_bot, wheel_rad_bottom / v.scale, -1))
             self._wheel_angles.append(0.0)
 
         # ------------------------------------------------------------------
@@ -212,9 +219,9 @@ class CartItem(QGraphicsRectItem):
         last frame.  Positive = rightward motion.  Each wheel uses its own
         radius so that both top and bottom wheels roll without slipping.
         """
-        for i, (w, rad_m) in enumerate(self._wheels):
+        for i, (w, rad_m, direction) in enumerate(self._wheels):
             if rad_m > 0:
-                self._wheel_angles[i] += math.degrees(delta_x_meters / rad_m)
+                self._wheel_angles[i] += math.degrees(delta_x_meters / rad_m) * direction
                 w.setRotation(self._wheel_angles[i])
 
     # -- mouse interaction --------------------------------------------------
