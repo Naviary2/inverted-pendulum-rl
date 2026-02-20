@@ -1,156 +1,137 @@
 # pendulum/interaction.py
 
-"""Handles manual user interaction, such as dragging the cart with the mouse."""
+"""Custom QGraphicsItem subclasses that handle user interaction with the simulation."""
 
 from __future__ import annotations
 
+import mujoco
 import numpy as np
-import pygame
+
+from PySide6.QtCore import Qt
+from PySide6.QtGui import QBrush, QColor, QPen
+from PySide6.QtWidgets import QGraphicsEllipseItem, QGraphicsRectItem
 
 from .config import PendulumConfig, VisualizationConfig
 from .environment import CartPendulumEnv
 
 
-class ForceCircleController:
-    """Manages the force circle mode that follows the mouse and collides with bodies."""
+def _rgb(t: tuple) -> QColor:
+    """Convert an (r, g, b) or (r, g, b, a) tuple to a QColor."""
+    return QColor(*t)
 
-    def __init__(self, env: CartPendulumEnv, p_cfg: PendulumConfig, v_cfg: VisualizationConfig):
+
+class CartItem(QGraphicsRectItem):
+    """Draggable cart rectangle.
+
+    The item's *local* coordinate origin is at the centre of the cart
+    rectangle so that ``setPos(px, 0)`` places the cart correctly on the
+    track.
+    """
+
+    def __init__(
+        self,
+        env: CartPendulumEnv,
+        p_cfg: PendulumConfig,
+        v: VisualizationConfig,
+        parent=None,
+    ):
+        cart_w = v.cart_width * v.scale
+        cart_h = v.cart_height * v.scale
+        # Rect centred on local (0, 0)
+        super().__init__(-cart_w / 2, -cart_h / 2, cart_w, cart_h, parent)
+
         self.env = env
         self.p_cfg = p_cfg
-        self.v = v_cfg
-        
-        # Force circle mode state (toggled with "F" key)
-        self.is_active = False
-        
-        # Access internal MuJoCo handles for direct manipulation
-        self.mujoco_model = env._mujoco_env.unwrapped.model
-        self.mujoco_data = env._mujoco_env.unwrapped.data
-        
-        # Look up the mocap body index by name for robustness
-        import mujoco
-        body_id = mujoco.mj_name2id(self.mujoco_model, mujoco.mjtObj.mjOBJ_BODY, "force_circle_mocap")
-        # Find the mocap index for this body
-        self._mocap_index = self.mujoco_model.body_mocapid[body_id]
-
-    def update(self, events: list, mouse_pos: tuple, cx: int, cy: int) -> None:
-        """
-        Processes keyboard events to toggle the force circle mode,
-        and updates the force circle position to follow the mouse.
-        """
-        # Handle keyboard events for toggling
-        for event in events:
-            if event.type == pygame.KEYDOWN and event.key == pygame.K_f:
-                self.is_active = not self.is_active
-
-        if self.is_active:
-            # Convert mouse position (pixels) to world coordinates (meters)
-            # Mouse X -> world X, Mouse Y -> world Z (MuJoCo uses Z as vertical)
-            mouse_x, mouse_y = mouse_pos
-            world_x = (mouse_x - cx) / self.v.scale
-            world_z = (cy - mouse_y) / self.v.scale  # Invert Y since screen Y is down
-            
-            # Update the position of the force circle mocap body
-            self.mujoco_data.mocap_pos[self._mocap_index, 0] = world_x  # X position
-            self.mujoco_data.mocap_pos[self._mocap_index, 2] = world_z  # Z position (height)
-        else:
-            # Move the force circle far away when inactive (off-screen)
-            self.mujoco_data.mocap_pos[self._mocap_index, 2] = 100.0
-
-    def draw(self, screen: pygame.Surface, mouse_pos: tuple) -> None:
-        """
-        Draws the force circle as a hollow red circle at the mouse position.
-        """
-        if not self.is_active:
-            return
-        
-        mouse_x, mouse_y = mouse_pos
-        radius = int(self.p_cfg.force_circle_radius * self.v.scale)
-        thickness = self.v.force_circle_thickness
-        color = self.v.force_circle_color
-        
-        # Draw hollow circle (outline only)
-        pygame.draw.circle(screen, color, (mouse_x, mouse_y), radius, thickness)
-
-
-class CartDragController:
-    """Encapsulates the logic for dragging the cart via MuJoCo mocap constraints."""
-
-    def __init__(self, env: CartPendulumEnv, p_cfg: PendulumConfig, v_cfg: VisualizationConfig):
-        self.env = env
-        self.p_cfg = p_cfg
-        self.v = v_cfg
-        
-        # --- Manual Interaction State ---
+        self.v = v
         self.is_dragging = False
-        self.cursor_set_to_hand = False
-        
-        # Access internal MuJoCo handles for direct manipulation
-        self.mujoco_data = env._mujoco_env.unwrapped.data
 
-    def update(self, events: list, mouse_pos: tuple, cx: int, cy: int) -> np.ndarray | None:
-        """
-        Processes mouse events, updates the cursor, and manipulates the mocap body.
-        
-        Returns:
-            np.ndarray: A zero-action array if the cart is being dragged (overriding AI).
-            None: If the cart is not being dragged.
-        """
-        # Get current cart pixel position for hit testing
-        state = self.env._state
-        current_cart_x_px = cx + int(state[0] * self.v.scale)
-        cart_w_px = int(self.v.cart_width  * self.v.scale)
-        cart_h_px = int(self.v.cart_height * self.v.scale)
-        cart_hitbox = pygame.Rect(
-            current_cart_x_px - cart_w_px // 2,
-            cy - cart_h_px // 2,
-            cart_w_px,
-            cart_h_px
-        )
+        # MuJoCo data handle
+        self._mujoco_data = env._mujoco_env.unwrapped.data
 
-        is_hovering = cart_hitbox.collidepoint(mouse_pos)
+        # Visual styling
+        fill_color = _rgb(v.node_fill_color)
+        outline_color = _rgb(v.fg_color)
 
-        # Handle Mouse Interactions from the event queue
-        for event in events:
-            if event.type == pygame.MOUSEBUTTONDOWN:
-                if event.button == 1 and is_hovering:
-                    self.is_dragging = True
-                    # Activate the weld constraint to grab the cart
-                    self.mujoco_data.eq_active = 1
-            elif event.type == pygame.MOUSEBUTTONUP:
-                if event.button == 1:
-                    self.is_dragging = False
-                    # Deactivate the weld constraint to release the cart
-                    self.mujoco_data.eq_active = 0
+        self.setBrush(QBrush(fill_color))
+        pen = QPen(outline_color, v.track_thick)
+        pen.setJoinStyle(Qt.PenJoinStyle.RoundJoin)
+        self.setPen(pen)
 
-        # --- Cursor Logic ---
+        self.setAcceptHoverEvents(True)
+        self.setCursor(Qt.CursorShape.OpenHandCursor)
+
+    # -- mouse interaction --------------------------------------------------
+
+    def mousePressEvent(self, event):
+        if event.button() == Qt.MouseButton.LeftButton:
+            self.is_dragging = True
+            self._mujoco_data.eq_active = 1
+            self.setCursor(Qt.CursorShape.ClosedHandCursor)
+            event.accept()
+            return
+        super().mousePressEvent(event)
+
+    def mouseMoveEvent(self, event):
         if self.is_dragging:
-            if self.cursor_set_to_hand:
-                pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_SIZEALL)
-                self.cursor_set_to_hand = False
-        elif is_hovering:
-            if not self.cursor_set_to_hand:
-                pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_HAND)
-                self.cursor_set_to_hand = True
-        else:
-            if self.cursor_set_to_hand:
-                pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_ARROW)
-                self.cursor_set_to_hand = False
-
-        # --- Action & Mocap Update ---
-        if self.is_dragging:
-            # 1. Convert Mouse X (pixels) -> World X (meters)
-            mouse_x = mouse_pos[0]
-            target_x = (mouse_x - cx) / self.v.scale
-            
-            # Clamp to track limits
+            scene_pos = event.scenePos()
+            target_x = scene_pos.x() / self.v.scale
             half_track = self.p_cfg.track_length / 2.0
             target_x = float(np.clip(target_x, -half_track, half_track))
-            
-            # 2. Update the position of the mocap body
-            # The weld constraint will pull the cart towards this position.
-            self.mujoco_data.mocap_pos[0, 0] = target_x
-            
-            # 3. Apply zero action while dragging
-            return np.array([0.0], dtype=np.float32)
+            self._mujoco_data.mocap_pos[0, 0] = target_x
+            event.accept()
+            return
+        super().mouseMoveEvent(event)
 
-        return None
+    def mouseReleaseEvent(self, event):
+        if event.button() == Qt.MouseButton.LeftButton:
+            self.is_dragging = False
+            self._mujoco_data.eq_active = 0
+            self.setCursor(Qt.CursorShape.OpenHandCursor)
+            event.accept()
+            return
+        super().mouseReleaseEvent(event)
+
+
+class ForceCircleItem(QGraphicsEllipseItem):
+    """A hollow circle that follows the mouse and interacts with MuJoCo bodies."""
+
+    def __init__(
+        self,
+        env: CartPendulumEnv,
+        p_cfg: PendulumConfig,
+        v: VisualizationConfig,
+        parent=None,
+    ):
+        radius_px = p_cfg.force_circle_radius * v.scale
+        super().__init__(-radius_px, -radius_px, 2 * radius_px, 2 * radius_px, parent)
+
+        self.env = env
+        self.p_cfg = p_cfg
+        self.v = v
+        self.is_active = False
+
+        # MuJoCo mocap handle
+        mujoco_model = env._mujoco_env.unwrapped.model
+        self._mujoco_data = env._mujoco_env.unwrapped.data
+        body_id = mujoco.mj_name2id(mujoco_model, mujoco.mjtObj.mjOBJ_BODY, "force_circle_mocap")
+        self._mocap_index = mujoco_model.body_mocapid[body_id]
+
+        pen = QPen(_rgb(v.force_circle_color), v.force_circle_thickness)
+        self.setPen(pen)
+        self.setBrush(Qt.BrushStyle.NoBrush)
+        self.setVisible(False)
+
+    def toggle(self):
+        self.is_active = not self.is_active
+        self.setVisible(self.is_active)
+        if not self.is_active:
+            self._mujoco_data.mocap_pos[self._mocap_index, 2] = 100.0
+
+    def update_position(self, scene_x: float, scene_y: float):
+        if not self.is_active:
+            return
+        self.setPos(scene_x, scene_y)
+        world_x = scene_x / self.v.scale
+        world_z = -scene_y / self.v.scale  # scene Y down → MuJoCo Z up
+        self._mujoco_data.mocap_pos[self._mocap_index, 0] = world_x
+        self._mujoco_data.mocap_pos[self._mocap_index, 2] = world_z

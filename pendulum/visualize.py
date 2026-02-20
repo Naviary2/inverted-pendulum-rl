@@ -1,12 +1,12 @@
 # pendulum/visualize.py
 
-"""Pygame visualisation of the trained pendulum model.
+"""PySide6 visualisation of the trained pendulum model.
 
 Renders:
-  • Black background
+  • Dark background
   • White horizontal track
-  • White-outlined cart with semi-transparent white fill
-  • White pendulum rod(s)
+  • White-outlined cart with semi-transparent fill
+  • White pendulum rod(s) with round caps
   • White nodes at each joint / tip
 
 Usage:
@@ -17,118 +17,114 @@ Usage:
 from __future__ import annotations
 
 import argparse
-import asyncio
-import time
+import sys
 
 import numpy as np
-import pygame
+
+from PySide6.QtCore import Qt, QTimer
+from PySide6.QtGui import QKeyEvent
+from PySide6.QtWidgets import QApplication, QMainWindow
 
 from .config import PendulumConfig, TrainingConfig, VisualizationConfig
 from .environment import CartPendulumEnv
-from .interaction import CartDragController, ForceCircleController
-from .renderer import SceneRenderer
+from .renderer import PendulumScene, PendulumView
 
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
 
 def _load_model(path: str):
-    """Load a trained PPO model (returns None when *path* is empty)."""
+    """Load a trained PPO model (returns *None* when *path* is empty)."""
     if not path:
         return None
     from stable_baselines3 import PPO
-
     return PPO.load(path)
 
 
-async def _async_run(
-    env: CartPendulumEnv,
-    model,
-    p_cfg: PendulumConfig,
-    v: VisualizationConfig,
-    screen: pygame.Surface
-):
-    """Async main loop to handle physics and rendering with smoother VSync."""
-    loop = asyncio.get_running_loop()
-    
-    obs, _ = env.reset()
-    running = True
+# ---------------------------------------------------------------------------
+# Window
+# ---------------------------------------------------------------------------
 
-    # Timing variables for VSync framerate limiting
-    limit_frame_duration = 1.0 / p_cfg.fps
-    next_frame_target = 0.0
+class PendulumWindow(QMainWindow):
+    """Main window that hosts the simulation view and drives the timer loop."""
 
-    # Initialize the drag controller
-    drag_controller = CartDragController(env, p_cfg, v)
-    
-    # Initialize the force circle controller
-    force_circle_controller = ForceCircleController(env, p_cfg, v)
+    def __init__(
+        self,
+        env: CartPendulumEnv,
+        model,
+        p_cfg: PendulumConfig,
+        v: VisualizationConfig,
+    ):
+        super().__init__()
+        self.env = env
+        self.model = model
+        self.p_cfg = p_cfg
+        self.v = v
 
-    # Initialize the scene renderer
-    renderer = SceneRenderer(p_cfg, v)
+        self.setWindowTitle("Inverted Pendulum")
+        self.setFixedSize(v.width, v.height)
 
-    while running:
-        # --- Framerate Limiter ---
-        # Logic from: https://glyph.twistedmatrix.com/2022/02/a-better-pygame-mainloop.html
-        if limit_frame_duration:
-            this_frame = time.time()
-            delay = next_frame_target - this_frame
-            if delay > 0:
-                await asyncio.sleep(delay)
-            next_frame_target = time.time() + limit_frame_duration
+        self.obs, _ = env.reset()
 
-        # Calculate screen geometry for rendering & input
-        cx = v.width // 2
-        cy = v.height // 2
-        mouse_pos = pygame.mouse.get_pos()
-        
-        # Fetch all events once per frame
-        events = pygame.event.get()
+        # Scene & view
+        self._scene = PendulumScene(env, p_cfg, v)
+        self._view = PendulumView(self._scene)
+        self.setCentralWidget(self._view)
 
-        # Handle General Events
-        for event in events:
-            if event.type == pygame.QUIT:
-                running = False
-            elif event.type == pygame.KEYDOWN and event.key == pygame.K_r:
-                obs, _ = env.reset()
-                
-        # --- Manual Interaction ---
-        drag_action = drag_controller.update(events, mouse_pos, cx, cy)
-        
-        # --- Force Circle Interaction ---
-        force_circle_controller.update(events, mouse_pos, cx, cy)
+        # Initial sync
+        self._scene.sync_from_state(env._state)
 
-        # --- action ---
-        if drag_action is not None:
-            # Overridden by manual dragging
-            action = drag_action
+        # Timer at config fps
+        self._timer = QTimer(self)
+        interval_ms = max(1, int(1000 / p_cfg.fps))
+        self._timer.setInterval(interval_ms)
+        self._timer.timeout.connect(self._tick)
+        self._timer.start()
+
+    # -- key handling -------------------------------------------------------
+
+    def keyPressEvent(self, event: QKeyEvent):
+        if event.key() == Qt.Key.Key_R:
+            self.obs, _ = self.env.reset()
+        elif event.key() == Qt.Key.Key_F:
+            self._scene._force_circle.toggle()
+            # Sync force circle to current cursor position immediately
+            cursor_pos = self._view.mapFromGlobal(self.cursor().pos())
+            scene_pos = self._view.mapToScene(cursor_pos)
+            self._scene._force_circle.update_position(scene_pos.x(), scene_pos.y())
+        super().keyPressEvent(event)
+
+    # -- simulation tick ----------------------------------------------------
+
+    def _tick(self):
+        cart = self._scene._cart
+
+        if cart.is_dragging:
+            action = np.array([0.0], dtype=np.float32)
+        elif self.model is not None:
+            action, _ = self.model.predict(self.obs, deterministic=True)
         else:
-            if model is not None:
-                # Normal AI control
-                action, _ = model.predict(obs, deterministic=True)
-            else:
-                # Randomly choose max-left or max-right force.
-                action = np.random.choice([-1, 1], size=(1,))
-                # action = np.random.choice([-0.1, 0.1], size=(1,))
-                # Apply no force
-                action = np.array([0.0])
+            action = np.array([0.0])
 
-        obs, _reward, terminated, truncated, _ = env.step(action)
+        self.obs, _reward, terminated, truncated, _ = self.env.step(action)
 
-        if terminated or truncated:
-            if not drag_controller.is_dragging:
-                obs, _ = env.reset()
+        if (terminated or truncated) and not cart.is_dragging:
+            self.obs, _ = self.env.reset()
 
-        # --- draw ---
-        renderer.draw(screen, env._state, cx, cy, mouse_pos, force_circle_controller)
+        self._scene.sync_from_state(self.env._state)
 
-        # Run flip in an executor to avoid blocking the event loop during VSync wait
-        await loop.run_in_executor(None, pygame.display.flip)
 
+# ---------------------------------------------------------------------------
+# Public API
+# ---------------------------------------------------------------------------
 
 def run(
     model_path: str = "",
     pendulum_cfg: PendulumConfig | None = None,
     vis_cfg: VisualizationConfig | None = None,
 ):
-    """Open a pygame window and run the pendulum simulation."""
+    """Open a Qt window and run the pendulum simulation."""
     p_cfg = pendulum_cfg or PendulumConfig()
     v = vis_cfg or VisualizationConfig()
 
@@ -137,28 +133,14 @@ def run(
     env = CartPendulumEnv(pendulum_config=p_cfg, max_episode_steps=t_cfg.total_timesteps)
     model = _load_model(model_path)
 
-    pygame.init()
-    
-    # Use SCALED and vsync=1 as recommended by:
-    # https://glyph.twistedmatrix.com/2022/02/a-better-pygame-mainloop.html
-    screen = pygame.display.set_mode(
-        (v.width, v.height), 
-        flags=pygame.SCALED, 
-        vsync=1
-    )
-    
-    pygame.display.set_caption("Inverted Pendulum")
-    
-    # Use asyncio.run to execute the async main loop
-    try:
-        asyncio.run(_async_run(env, model, p_cfg, v, screen))
-    except KeyboardInterrupt:
-        pass
-    finally:
-        pygame.quit()
+    app = QApplication.instance() or QApplication(sys.argv)
+    window = PendulumWindow(env, model, p_cfg, v)
+    window.show()
+    sys.exit(app.exec())
 
 
 # ---- CLI entry point -------------------------------------------------------
+
 def _parse_args():
     parser = argparse.ArgumentParser(description="Visualise pendulum")
     parser.add_argument("--model", type=str, default="",

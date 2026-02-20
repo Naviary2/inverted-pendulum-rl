@@ -4,14 +4,14 @@ A reinforcement learning project that trains a PPO agent to balance an inverted 
 
 ## Requirements
 
-- Python 3.10+
+- Python 3.11+
 
 ## Installation
 
 2. **Create and activate a virtual environment**
 
    ```bash
-   python -m venv .venv
+   python3.11 -m venv .venv
    # Linux / macOS
    source .venv/bin/activate
    # Windows

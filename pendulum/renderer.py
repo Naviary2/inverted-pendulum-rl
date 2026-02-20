@@ -1,178 +1,142 @@
 # pendulum/renderer.py
 
-"""Renders the scene objects (track, cart, pendulum links and nodes) to a pygame surface."""
+"""QGraphicsScene and QGraphicsView that render the pendulum simulation."""
 
 from __future__ import annotations
 
-import math
-
 import numpy as np
-import pygame
-import pygame.gfxdraw
+
+from PySide6.QtCore import Qt, QLineF
+from PySide6.QtGui import QBrush, QColor, QPainter, QPen
+from PySide6.QtWidgets import (
+    QGraphicsEllipseItem,
+    QGraphicsLineItem,
+    QGraphicsRectItem,
+    QGraphicsScene,
+    QGraphicsView,
+)
 
 from .config import PendulumConfig, VisualizationConfig
-from .interaction import ForceCircleController
+from .environment import CartPendulumEnv
+from .interaction import CartItem, ForceCircleItem
 
 
-def _draw_thick_aaline(surface, p1, p2, width, color):
-    """Draws a thick anti-aliased line (simulated via polygon)."""
-    x1, y1 = p1
-    x2, y2 = p2
-    dx = x2 - x1
-    dy = y2 - y1
-    length = math.hypot(dx, dy)
-
-    if length == 0:
-        return
-
-    # Normalized direction vector components
-    ux = dx / length
-    uy = dy / length
-
-    # Perpendicular vector ((-uy, ux) corresponds to rotation by 90 degrees)
-    # Scaled by half width to get offset from center line
-    half_width = width / 2
-    px = -uy * half_width
-    py = ux * half_width
-
-    # Calculate 4 corners of the rectangle
-    corners = [
-        (int(x1 + px), int(y1 + py)),
-        (int(x1 - px), int(y1 - py)),
-        (int(x2 - px), int(y2 - py)),
-        (int(x2 + px), int(y2 + py)),
-    ]
-
-    # Draw filled polygon (the body)
-    pygame.gfxdraw.filled_polygon(surface, corners, color)
-    # Draw anti-aliased outline (the smooth edges)
-    pygame.gfxdraw.aapolygon(surface, corners, color)
+def _rgb(t: tuple) -> QColor:
+    """Convert an (r, g, b) or (r, g, b, a) tuple to a QColor."""
+    return QColor(*t)
 
 
-class SceneRenderer:
-    """Draws the full simulation scene: background, track, cart, and pendulum."""
+class PendulumScene(QGraphicsScene):
+    """QGraphicsScene that holds all simulation items."""
 
-    def __init__(self, p_cfg: PendulumConfig, v: VisualizationConfig):
+    def __init__(self, env, p_cfg, v, parent=None):
+        super().__init__(parent)
+        self.env = env
         self.p_cfg = p_cfg
         self.v = v
 
-    def draw(
-        self,
-        screen: pygame.Surface,
-        state: np.ndarray,
-        cx: int,
-        cy: int,
-        mouse_pos: tuple,
-        force_circle_controller: ForceCircleController,
-    ) -> None:
-        """Render one frame of the simulation scene."""
+        self.setBackgroundBrush(QBrush(_rgb(v.bg_color)))
+
+        # Scene rect centred on (0, 0) so cart x=0 is at centre
+        self.setSceneRect(-v.width / 2, -v.height / 2, v.width, v.height)
+
+        fg = _rgb(v.fg_color)
+
+        # --- Track ---
+        cart_w_px = v.cart_width * v.scale
+        cart_node_px = v.cart_node_radius * v.scale
+        track_len = p_cfg.track_length * v.scale + cart_w_px + cart_node_px
+        track_h = v.track_h * v.scale
+        self._track = QGraphicsRectItem(-track_len / 2, -track_h / 2, track_len, track_h)
+        pen_track = QPen(fg, v.track_thick)
+        self._track.setPen(pen_track)
+        self._track.setBrush(Qt.BrushStyle.NoBrush)
+        self.addItem(self._track)
+
+        # --- Cart ---
+        self._cart = CartItem(env, p_cfg, v)
+        self.addItem(self._cart)
+
+        # --- Cart pivot node ---
+        cnr = v.cart_node_radius * v.scale
+        self._cart_node = QGraphicsEllipseItem(-cnr, -cnr, 2 * cnr, 2 * cnr)
+        self._cart_node.setBrush(QBrush(fg))
+        self._cart_node.setPen(QPen(Qt.PenStyle.NoPen))
+        self.addItem(self._cart_node)
+
+        # --- Pendulum links (lines) and tip nodes ---
+        n = p_cfg.num_links
+        node_rad = p_cfg.node_radius * v.scale
+        node_inner = node_rad - v.node_outline_width * v.scale
+        pend_w = v.pendulum_width * v.scale
+
+        self._links: list[QGraphicsLineItem] = []
+        self._nodes_outer: list[QGraphicsEllipseItem] = []
+        self._nodes_inner: list[QGraphicsEllipseItem] = []
+
+        for _ in range(n):
+            line = QGraphicsLineItem()
+            pen = QPen(fg, pend_w, Qt.PenStyle.SolidLine, Qt.PenCapStyle.RoundCap)
+            line.setPen(pen)
+            self.addItem(line)
+            self._links.append(line)
+
+            # outer node
+            outer = QGraphicsEllipseItem(-node_rad, -node_rad, 2 * node_rad, 2 * node_rad)
+            outer.setBrush(QBrush(fg))
+            outer.setPen(QPen(Qt.PenStyle.NoPen))
+            self.addItem(outer)
+            self._nodes_outer.append(outer)
+
+            # inner node
+            inner = QGraphicsEllipseItem(-node_inner, -node_inner, 2 * node_inner, 2 * node_inner)
+            inner.setBrush(QBrush(_rgb(v.node_fill_color)))
+            inner.setPen(QPen(Qt.PenStyle.NoPen))
+            self.addItem(inner)
+            self._nodes_inner.append(inner)
+
+        # --- Force circle ---
+        self._force_circle = ForceCircleItem(env, p_cfg, v)
+        self.addItem(self._force_circle)
+
+    # ---------------------------------------------------------------
+
+    def sync_from_state(self, state: np.ndarray):
+        """Update item positions from MuJoCo state ``[x, θ, ẋ, θ̇]``."""
         v = self.v
         p_cfg = self.p_cfg
+        cart_px = state[0] * v.scale
 
-        # Background
-        screen.fill(v.bg_color)
+        self._cart.setPos(cart_px, 0)
+        self._cart_node.setPos(cart_px, 0)
 
-        # Pre-compute pixel sizes from metre-based config values
-        cart_w_px      = int(v.cart_width        * v.scale)
-        cart_h_px      = int(v.cart_height       * v.scale)
-        cart_rad_px    = int(v.cart_rad          * v.scale)
-        cart_node_px   = int(v.cart_node_radius  * v.scale)
-        node_rad_px    = int(p_cfg.node_radius    * v.scale)
-        node_out_px    = int(v.node_outline_width * v.scale)
-        pend_w_px      = int(v.pendulum_width    * v.scale)
-        track_h_px     = int(v.track_h           * v.scale)
-        track_rad_px   = int(v.track_rad         * v.scale)
+        pivot_x, pivot_y = cart_px, 0.0
 
-        # Track
-        track_len_px = int(p_cfg.track_length * v.scale) + cart_w_px + cart_node_px
-        # Create a rectangle centered at (cx, cy)
-        track_rect = pygame.Rect(
-            cx - track_len_px // 2,  # Left
-            cy - track_h_px // 2,    # Top
-            track_len_px,            # Width
-            track_h_px               # Height
-        )
-        # Draw hollow rounded rectangle
-        pygame.draw.rect(
-            screen,
-            v.fg_color,
-            track_rect,
-            v.track_thick,              # Thickness (makes it hollow)
-            border_radius=track_rad_px  # Roundness
-        )
-
-        # Define the hard limit based on the track length
-        half_length = p_cfg.track_length / 2.0
-        # Clamp the cart's x position so it visually never leaves the track
-        # (Even if MuJoCo calculates a slight penetration of the wall)
-        cart_x = float(np.clip(state[0], -half_length, half_length))
-        # Use this clamped value to calculate pixels
-        cart_x_px = cx + int(cart_x * v.scale)
-
-        # Cart rectangle (outlined + translucent fill)
-        cart_rect = pygame.Rect(
-            cart_x_px - cart_w_px // 2,
-            cy - cart_h_px // 2,
-            cart_w_px,
-            cart_h_px,
-        )
-
-        # Draw Fill
-        pygame.draw.rect(
-            screen,
-            v.node_fill_color,
-            cart_rect,
-            border_radius=cart_rad_px  # Roundness
-        )
-        # Draw hollow rounded rectangle (Outline)
-        pygame.draw.rect(
-            screen,
-            v.fg_color,
-            cart_rect,
-            v.track_thick,              # Thickness (makes it hollow)
-            border_radius=cart_rad_px   # Roundness
-        )
-
-        # --- pendulum links & nodes ---
-        n = p_cfg.num_links
-        lengths = p_cfg.link_lengths
-
-        # First node sits at the cart pivot (top-centre of cart)
-        pivot_x, pivot_y = cart_x_px, cy
-
-        # Draw first node
-        pygame.gfxdraw.aacircle(screen, pivot_x, pivot_y, cart_node_px, v.fg_color) ## AA outline
-        pygame.gfxdraw.filled_circle(screen, pivot_x, pivot_y, cart_node_px, v.fg_color) # Filled circle
-
-        for i in range(n):
+        for i in range(p_cfg.num_links):
             theta_i = state[1 + i]
-            end_x = pivot_x + int(lengths[i] * v.scale * np.sin(theta_i))
-            end_y = pivot_y - int(lengths[i] * v.scale * np.cos(theta_i))
+            length_px = p_cfg.link_lengths[i] * v.scale
+            end_x = pivot_x + length_px * np.sin(theta_i)
+            end_y = pivot_y - length_px * np.cos(theta_i)
 
-            # Using custom helper for AA thick line,
-            # Since gfxdraw.line doesn't support width and pygame.draw.line isn't anti-aliased.
-            _draw_thick_aaline(
-                screen,
-                (pivot_x, pivot_y),
-                (end_x, end_y),
-                pend_w_px,
-                v.fg_color
-            )
+            self._links[i].setLine(QLineF(pivot_x, pivot_y, end_x, end_y))
+            self._nodes_outer[i].setPos(end_x, end_y)
+            self._nodes_inner[i].setPos(end_x, end_y)
 
-            # --- Draw Tip Node ---
-            # Using gfxdraw for AA
-
-            # 1. Draw Outline (Outer Circle)
-            pygame.gfxdraw.aacircle(screen, end_x, end_y, node_rad_px, v.fg_color) ## AA outline
-            pygame.gfxdraw.filled_circle(screen, end_x, end_y, node_rad_px, v.fg_color) # Filled circle
-
-            # 2. Draw Fill (Inner Circle)
-            inner_radius = node_rad_px - node_out_px
-            pygame.gfxdraw.aacircle(screen, end_x, end_y, inner_radius, v.node_fill_color) # AA outline
-            pygame.gfxdraw.filled_circle(screen, end_x, end_y, inner_radius, v.node_fill_color) # Filled circle
-
-            # Next pivot is this tip
             pivot_x, pivot_y = end_x, end_y
 
-        # --- Draw Force Circle ---
-        force_circle_controller.draw(screen, mouse_pos)
+
+class PendulumView(QGraphicsView):
+    """QGraphicsView with anti-aliasing and mouse-tracking for the force circle."""
+
+    def __init__(self, scene: PendulumScene, parent=None):
+        super().__init__(scene, parent)
+        self.setRenderHint(QPainter.RenderHint.Antialiasing)
+        self.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.setMouseTracking(True)
+        self._scene: PendulumScene = scene
+
+    def mouseMoveEvent(self, event):
+        scene_pos = self.mapToScene(event.pos())
+        self._scene._force_circle.update_position(scene_pos.x(), scene_pos.y())
+        super().mouseMoveEvent(event)
