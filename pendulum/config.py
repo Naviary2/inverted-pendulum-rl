@@ -82,6 +82,3 @@ class VisualizationConfig:
     # Force circle (toggled with "F" key)
     force_circle_thickness: float = 0.016  # m
     force_circle_color: tuple = (255, 0, 0)  # red
-
-    # Cart lock (toggled with "G" key)
-    cart_locked_color: tuple = (220, 150, 0)  # amber

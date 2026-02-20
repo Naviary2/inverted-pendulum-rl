@@ -11,7 +11,7 @@ import mujoco
 import numpy as np
 
 from PySide6.QtCore import Qt
-from PySide6.QtGui import QBrush, QColor, QPen, QPixmap
+from PySide6.QtGui import QBrush, QColor, QPainter, QPen, QPixmap
 from PySide6.QtWidgets import (
     QGraphicsEllipseItem,
     QGraphicsItem,
@@ -128,6 +128,14 @@ class CartItem(QGraphicsRectItem):
             Qt.TransformationMode.SmoothTransformation,
         )
 
+        dark_pixmap = wheel_pixmap.copy()
+        painter = QPainter(dark_pixmap)
+        painter.setCompositionMode(QPainter.CompositionMode.CompositionMode_SourceAtop)
+        painter.fillRect(dark_pixmap.rect(), QColor(0, 0, 0, 150))
+        painter.end()
+        self._normal_wheel_pixmap = wheel_pixmap
+        self._locked_wheel_pixmap = dark_pixmap
+
         self._wheels: list[QGraphicsPixmapItem] = []
         for sx in (-1, 1):                       # left / right
             strut_cx = sx * (body_w / 2)
@@ -158,10 +166,6 @@ class CartItem(QGraphicsRectItem):
         )
         self._node_inner.setBrush(QBrush(node_color))
         self._node_inner.setPen(QPen(Qt.PenStyle.NoPen))
-
-        # Colours used when toggling the cart lock
-        self._normal_color = node_color
-        self._locked_color = _rgb(v.cart_locked_color)
 
         self.setAcceptHoverEvents(True)
         self.setCursor(Qt.CursorShape.OpenHandCursor)
@@ -219,11 +223,13 @@ class CartItem(QGraphicsRectItem):
         if self.is_locked:
             self._mujoco_data.mocap_pos[0, 0] = self._mujoco_data.qpos[0]
             self._mujoco_data.eq_active = 1
-            self._node_inner.setBrush(QBrush(self._locked_color))
+            for w in self._wheels:
+                w.setPixmap(self._locked_wheel_pixmap)
         else:
             if not self.is_dragging:
                 self._mujoco_data.eq_active = 0
-            self._node_inner.setBrush(QBrush(self._normal_color))
+            for w in self._wheels:
+                w.setPixmap(self._normal_wheel_pixmap)
 
 
 class ForceCircleItem(QGraphicsEllipseItem):
