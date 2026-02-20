@@ -105,9 +105,7 @@ class PendulumScene(QGraphicsScene):
         """Update item positions from MuJoCo state ``[x, θ, ẋ, θ̇]``."""
         v = self.v
         p_cfg = self.p_cfg
-        half_length = p_cfg.track_length / 2.0
-        cart_x = float(np.clip(state[0], -half_length, half_length))
-        cart_px = cart_x * v.scale
+        cart_px = state[0] * v.scale
 
         self._cart.setPos(cart_px, 0)
         self._cart_node.setPos(cart_px, 0)

@@ -128,7 +128,8 @@ def run(
     p_cfg = pendulum_cfg or PendulumConfig()
     v = vis_cfg or VisualizationConfig()
 
-    t_cfg = TrainingConfig()
+    t_cfg = TrainingConfig() # Load training config to access total_timesteps
+    # Overwrite the maximum episode steps to match total timesteps for a full-length run
     env = CartPendulumEnv(pendulum_config=p_cfg, max_episode_steps=t_cfg.total_timesteps)
     model = _load_model(model_path)
 
