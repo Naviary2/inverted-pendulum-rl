@@ -70,7 +70,7 @@ class VisualizationConfig:
     cart_body_width: float = 0.65
     # Strut rectangles on the left and right sides of the cart body
     cart_strut_width: float = 0.08
-    cart_strut_height: float = 0.33
+    cart_strut_height: float = 0.36
     cart_strut_center_y: float = 0.013
     # Strut tilt: each strut is rotated this many degrees toward the cart centre
     # (tops lean inward, bottoms lean outward)
