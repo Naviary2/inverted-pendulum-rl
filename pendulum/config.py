@@ -29,7 +29,7 @@ class PendulumConfig:
 
     # Collision geometry
     node_radius: float = 0.13      # m  (tip node sphere radius)
-    force_circle_radius: float = 0.16  # m  (force circle sphere radius)
+    force_circle_radius: float = 0.24  # m  (force circle sphere radius)
 
     def __post_init__(self):
         assert len(self.link_lengths) == self.num_links
@@ -83,7 +83,7 @@ class VisualizationConfig:
     fg_color: tuple = (255, 255, 255) # white
 
     # Force circle (toggled with "F" key)
-    force_circle_thickness: float = 0.016  # m
+    force_circle_thickness: float = 0.02  # m
     force_circle_color: tuple = (255, 0, 0)  # red
 
     # Cart lock (toggled with "G" key)
