@@ -71,6 +71,10 @@ class VisualizationConfig:
     # Strut rectangles on the left and right sides of the cart body
     cart_strut_width: float = 0.07
     cart_strut_height: float = 0.3
+    cart_strut_center_y: float = -0.1
+    # Strut tilt: each strut is rotated this many degrees toward the cart centre
+    # (tops lean inward, bottoms lean outward)
+    cart_strut_angle: float = 20.0
 
     node_fill_color: tuple = (50, 160, 30)
     node_outline_width: float = 0.022 # m
@@ -82,10 +86,6 @@ class VisualizationConfig:
     # Force circle (toggled with "F" key)
     force_circle_thickness: float = 0.016  # m
     force_circle_color: tuple = (255, 0, 0)  # red
-
-    # Strut tilt: each strut is rotated this many degrees toward the cart centre
-    # (tops lean inward, bottoms lean outward)
-    cart_strut_angle: float = 20.0
 
     # Cart lock (toggled with "G" key)
     cart_locked_color: tuple = (220, 150, 0)  # amber
