@@ -76,7 +76,12 @@ def train(
         print(f"Loading existing model from {t_cfg.model_load_path} …")
         print("Note: hyperparameters (learning_rate, n_steps, etc.) are loaded "
               "from the saved model; TrainingConfig hyperparameters are ignored.")
-        model = PPO.load(t_cfg.model_load_path, env=vec_env, verbose=1)
+        model = PPO.load(
+            t_cfg.model_load_path,
+            env=vec_env,
+            verbose=1,
+            tensorboard_log=t_cfg.tensorboard_log or None,
+        )
     else:
         model = PPO(
             "MlpPolicy",
@@ -90,12 +95,16 @@ def train(
             clip_range=t_cfg.clip_range,
             ent_coef=t_cfg.ent_coef,
             verbose=1,
+            tensorboard_log=t_cfg.tensorboard_log or None,
         )
 
     # print(model.policy) # Print the policy architecture (number of inputs, hidden layers, neurons, outputs)
 
     print(f"Training with {t_cfg.n_envs} parallel environments "
           f"for {t_cfg.total_timesteps:,} timesteps …")
+    if t_cfg.tensorboard_log:
+        print(f"TensorBoard logs: {t_cfg.tensorboard_log}  "
+              f"(run: tensorboard --logdir {t_cfg.tensorboard_log})")
     model.learn(total_timesteps=t_cfg.total_timesteps, callback=eval_callback)
     model.save(t_cfg.model_save_path)
     print(f"Model saved to {t_cfg.model_save_path}")
@@ -114,6 +123,8 @@ def _parse_args():
     parser.add_argument("--save-path", type=str, default="models/ppo_pendulum")
     parser.add_argument("--load-model", type=str, default="",
                         help="Path to an existing model to continue training")
+    parser.add_argument("--tensorboard-log", type=str, default="logs/tensorboard",
+                        help="Directory for TensorBoard logs (empty string to disable)")
     return parser.parse_args()
 
 
@@ -123,6 +134,7 @@ if __name__ == "__main__":
         total_timesteps=args.timesteps,
         model_save_path=args.save_path,
         model_load_path=args.load_model,
+        tensorboard_log=args.tensorboard_log,
     )
     if args.n_envs is not None:
         t_cfg.n_envs = args.n_envs
