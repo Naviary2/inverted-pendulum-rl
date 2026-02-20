@@ -158,11 +158,7 @@ def run(
     # to periodically yield back to Python so the signal can be dispatched.
     def _handle_sigint(*_):
         app.quit()
-
     signal.signal(signal.SIGINT, _handle_sigint)
-    _sigint_timer = QTimer(app)
-    _sigint_timer.start(500)
-    _sigint_timer.timeout.connect(lambda: None)
 
     window = PendulumWindow(env, model, p_cfg, v)
     window.show()
