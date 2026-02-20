@@ -86,9 +86,6 @@ class VisualizationConfig:
     force_circle_thickness: float = 0.02  # m
     force_circle_color: tuple = (255, 0, 0)  # red
 
-    # Cart lock (toggled with "G" key)
-    cart_locked_wheel_tint: tuple = (0, 0, 0, 100)  # semi-transparent black overlay
-
     # Simulation widget (rounded-rect container for track / cart / pendulums)
     widget_padding_x: float = 1.0      # m  horizontal padding (left / right)
     widget_padding_y: float = 0.25      # m  vertical padding (top / bottom)
