@@ -72,19 +72,25 @@ def train(
         deterministic=True,
     )
 
-    model = PPO(
-        "MlpPolicy",
-        vec_env,
-        learning_rate=t_cfg.learning_rate,
-        n_steps=t_cfg.n_steps,
-        batch_size=t_cfg.batch_size,
-        n_epochs=t_cfg.n_epochs,
-        gamma=t_cfg.gamma,
-        gae_lambda=t_cfg.gae_lambda,
-        clip_range=t_cfg.clip_range,
-        ent_coef=t_cfg.ent_coef,
-        verbose=1,
-    )
+    if t_cfg.model_load_path:
+        print(f"Loading existing model from {t_cfg.model_load_path} …")
+        print("Note: hyperparameters (learning_rate, n_steps, etc.) are loaded "
+              "from the saved model; TrainingConfig hyperparameters are ignored.")
+        model = PPO.load(t_cfg.model_load_path, env=vec_env, verbose=1)
+    else:
+        model = PPO(
+            "MlpPolicy",
+            vec_env,
+            learning_rate=t_cfg.learning_rate,
+            n_steps=t_cfg.n_steps,
+            batch_size=t_cfg.batch_size,
+            n_epochs=t_cfg.n_epochs,
+            gamma=t_cfg.gamma,
+            gae_lambda=t_cfg.gae_lambda,
+            clip_range=t_cfg.clip_range,
+            ent_coef=t_cfg.ent_coef,
+            verbose=1,
+        )
 
     # print(model.policy) # Print the policy architecture (number of inputs, hidden layers, neurons, outputs)
 
@@ -106,6 +112,8 @@ def _parse_args():
     parser.add_argument("--n-envs", type=int, default=None,
                         help="Number of parallel envs (default: all cores)")
     parser.add_argument("--save-path", type=str, default="models/ppo_pendulum")
+    parser.add_argument("--load-model", type=str, default="",
+                        help="Path to an existing model to continue training")
     return parser.parse_args()
 
 
@@ -114,6 +122,7 @@ if __name__ == "__main__":
     t_cfg = TrainingConfig(
         total_timesteps=args.timesteps,
         model_save_path=args.save_path,
+        model_load_path=args.load_model,
     )
     if args.n_envs is not None:
         t_cfg.n_envs = args.n_envs
