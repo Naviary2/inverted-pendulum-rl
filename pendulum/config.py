@@ -13,7 +13,6 @@ class PendulumConfig:
 
     # Cart
     force_magnitude: float = 20          # Maximum force the cart can apply on any one frame
-    cart_mass: float = 1.0           # kg
     track_length: float = 2.4 * 2    # m (total track, cart can move ±half) - MUST MATCH XML!!!!!!
 
     fps: int = 60                    # Hz (Controls both render speed and physics timestep)
