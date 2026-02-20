@@ -89,7 +89,7 @@ class SimulationWidget(QGraphicsObject):
             alpha = int(10 * (1 - t) * t * 4)     # bell-curve alpha peak in the middle
             expand = spread * t
             shadow_rect = self._rect.adjusted(-expand * 0.4, -expand * 0.4,
-                                               expand * 0.4,  expand * 0.6)
+                                               expand * 0.4,  expand * 0.4)
             painter.setBrush(QBrush(QColor(0, 0, 0, alpha)))
             painter.drawRoundedRect(shadow_rect, radius_px + expand * 0.4,
                                                   radius_px + expand * 0.4)
