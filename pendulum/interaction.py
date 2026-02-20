@@ -32,9 +32,9 @@ class CartItem(QGraphicsRectItem):
     """Cart with white body, side struts, rolling wheels, and a pivot node.
 
     Visual layers (back to front):
-      1. Wheels (QGraphicsPixmapItem, behind parent via ItemStacksBehindParent)
-      2. Struts (QGraphicsRectItem, behind parent via ItemStacksBehindParent)
-      3. Cart body - the parent QGraphicsRectItem (white rectangle)
+      1. Struts (QGraphicsRectItem, behind parent via ItemStacksBehindParent)
+      2. Cart body - the parent QGraphicsRectItem (white rectangle)
+      3. Wheels (QGraphicsPixmapItem, in front of body/struts)
       4. Pivot node outer circle  (white, matches pendulum-node outline)
       5. Pivot node inner circle  (coloured, matches pendulum-node fill)
 
@@ -113,7 +113,7 @@ class CartItem(QGraphicsRectItem):
             strut.setAcceptedMouseButtons(Qt.MouseButton.NoButton)
 
         # ------------------------------------------------------------------
-        # Wheels  (drawn behind the body)
+        # Wheels  (drawn in front of the cart body and struts)
         # ------------------------------------------------------------------
         wheel_path = os.path.join(os.path.dirname(__file__), "..", "res", "wheel.png")
         wheel_path = os.path.normpath(wheel_path)
@@ -131,7 +131,7 @@ class CartItem(QGraphicsRectItem):
         dark_pixmap = wheel_pixmap.copy()
         painter = QPainter(dark_pixmap)
         painter.setCompositionMode(QPainter.CompositionMode.CompositionMode_SourceAtop)
-        painter.fillRect(dark_pixmap.rect(), QColor(0, 0, 0, 150))
+        painter.fillRect(dark_pixmap.rect(), _rgb(v.cart_locked_wheel_tint))
         painter.end()
         self._normal_wheel_pixmap = wheel_pixmap
         self._locked_wheel_pixmap = dark_pixmap
@@ -146,7 +146,6 @@ class CartItem(QGraphicsRectItem):
                 w.setPos(strut_cx - wheel_rad, wheel_cy - wheel_rad)
                 # Rotate around the pixmap centre
                 w.setTransformOriginPoint(wheel_rad, wheel_rad)
-                w.setFlag(QGraphicsItem.GraphicsItemFlag.ItemStacksBehindParent, True)
                 w.setAcceptedMouseButtons(Qt.MouseButton.NoButton)
                 self._wheels.append(w)
 
