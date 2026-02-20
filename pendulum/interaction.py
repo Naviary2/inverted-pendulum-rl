@@ -128,6 +128,7 @@ class CartItem(QGraphicsRectItem):
             Qt.TransformationMode.SmoothTransformation,
         )
 
+        # Create a darkened version of the wheel pixmap for the locked state
         dark_pixmap = wheel_pixmap.copy()
         painter = QPainter(dark_pixmap)
         painter.setCompositionMode(QPainter.CompositionMode.CompositionMode_SourceAtop)

@@ -84,4 +84,4 @@ class VisualizationConfig:
     force_circle_color: tuple = (255, 0, 0)  # red
 
     # Cart lock (toggled with "G" key)
-    cart_locked_wheel_tint: tuple = (0, 0, 0, 150)  # semi-transparent black overlay
+    cart_locked_wheel_tint: tuple = (0, 0, 0, 100)  # semi-transparent black overlay
