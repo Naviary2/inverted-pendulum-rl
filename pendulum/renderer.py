@@ -121,9 +121,9 @@ class TickRulerItem(QGraphicsItem):
 
     Renders ticks from ``-tick_range`` m to ``+tick_range`` m centred on x = 0.
     Three levels of prominence:
-        * integer positions  – tallest, most opaque
-        * half-integer positions – medium
-        * tenth-step positions – shortest, most transparent
+        * integer positions  - tallest, most opaque
+        * half-integer positions - medium
+        * tenth-step positions - shortest, most transparent
 
     The item's ``boundingRect`` covers only the drawn ticks so it never
     influences the layout of the parent ``SimulationWidget``.
