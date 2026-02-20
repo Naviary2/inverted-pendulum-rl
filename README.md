@@ -50,7 +50,7 @@ python -m pendulum.visualize
 ### Visualize a trained model
 
 ```bash
-python -m pendulum.visualize --model models/ppo_pendulum
+python -m pendulum.visualize --model models/ppo_pendulum.zip
 ```
 
 While the visualizer is running:

@@ -14,27 +14,112 @@ from __future__ import annotations
 
 import argparse
 import os
+import json
 from pathlib import Path
 
 from stable_baselines3 import PPO
-from stable_baselines3.common.vec_env import SubprocVecEnv
-from stable_baselines3.common.callbacks import EvalCallback
+from stable_baselines3.common.callbacks import BaseCallback, EvalCallback
 from stable_baselines3.common.monitor import Monitor
+from stable_baselines3.common.vec_env import SubprocVecEnv
 
 from .config import PendulumConfig, TrainingConfig
 from .environment import CartPendulumEnv
 
+# ==============================================================================
+# Custom Callback for Live Visualization and Checkpointing
+# ==============================================================================
+
+class LiveDashboardCallback(BaseCallback):
+    """
+    A custom callback that saves data for a live-updating visualizer,
+    correctly handling parallel environments by batching updates.
+    """
+
+    def __init__(self, save_dir: Path, save_freq: int = 50, verbose: int = 0):
+        super().__init__(verbose)
+        self.save_dir = save_dir
+        self.save_freq = save_freq
+
+        # Define file paths
+        self.latest_model_path = self.save_dir / "latest_model.zip"
+        self.stats_path = self.save_dir / "live_stats.json"
+        
+        # Initialize tracking variables
+        self.episode_count = 0
+        self.episode_rewards = []
+        self.episode_lengths = []
+
+    def _on_step(self) -> bool:
+        """This method is called after each step in the training."""
+        
+        # --- Batch the updates for parallel environments ---
+        newly_finished_episodes = 0
+        last_checkpoint_episode = 0
+
+        if "infos" in self.locals:
+            for info in self.locals["infos"]:
+                if "episode" in info:
+                    newly_finished_episodes += 1
+
+                    print(f"Episode {self.episode_count + newly_finished_episodes} finished with reward {info['episode']['r']} and length {info['episode']['l']} steps.")
+                    
+                    # --- 1. Collect all stats from this step first ---
+                    self.episode_rewards.append(info["episode"]["r"])
+                    self.episode_lengths.append(info["episode"]["l"])
+                    
+                    # --- 2. Check if a checkpoint should be saved ---
+                    # We check if the *previous* count was below the threshold
+                    # and the *new* count is at or above it.
+                    if (self.episode_count // self.save_freq) < ((self.episode_count + newly_finished_episodes) // self.save_freq):
+                        # Store the episode number for the checkpoint, but don't save yet.
+                        # This ensures only one checkpoint is saved per batch.
+                        last_checkpoint_episode = self.episode_count + newly_finished_episodes
+                        print(f"Checkpoint triggered at episode {last_checkpoint_episode} (after processing batch)")
+
+            # Update the total episode count after processing the batch
+            self.episode_count += newly_finished_episodes
+
+        # --- Perform a single save operation after the loop ---
+        if newly_finished_episodes > 0:
+            # --- Save Stats ---
+            stats = {
+                "rewards": self.episode_rewards,
+                "lengths": self.episode_lengths,
+                "total_steps": self.num_timesteps,
+                "total_episodes": self.episode_count
+            }
+            with open(self.stats_path, "w") as f:
+                json.dump(stats, f)
+                
+            # --- Save Latest Model ---
+            self.model.save(self.latest_model_path)
+
+            print(f"Saved latest model to {self.latest_model_path} and stats to {self.stats_path} after processing {newly_finished_episodes} new episodes.")
+            
+            # --- Save Checkpoint if Triggered ---
+            if last_checkpoint_episode > 0:
+                checkpoint_path = self.save_dir / f"model_checkpoint_{last_checkpoint_episode}.zip"
+                self.model.save(checkpoint_path)
+                # if self.verbose > 0:
+                print(f"Saved checkpoint for episode {last_checkpoint_episode} to {checkpoint_path}")
+
+        return True
+
+# ==============================================================================
+# Main Training Functions
+# ==============================================================================
 
 def _make_env(pendulum_cfg: PendulumConfig, max_episode_steps: int):
     """Return a callable that creates a fresh environment instance."""
 
     def _init():
+        # The Monitor wrapper is what captures episode rewards and lengths
         return Monitor(
             CartPendulumEnv(
                 pendulum_config=pendulum_cfg,
                 max_episode_steps=max_episode_steps,
             )
-        ) 
+        )
 
     return _init
 
@@ -51,7 +136,7 @@ def train(
     env_fns = [_make_env(p_cfg, t_cfg.max_episode_steps) for _ in range(t_cfg.n_envs)]
     vec_env = SubprocVecEnv(env_fns)
 
-    # Eval environment (single process)
+    # Eval environment (single process) for the EvalCallback
     eval_env = Monitor(
         CartPendulumEnv(
             pendulum_config=p_cfg,
@@ -60,17 +145,27 @@ def train(
     )
 
     # Ensure save directory exists
-    save_dir = Path(t_cfg.model_save_path).parent
+    # The main model will be saved as 'ppo_pendulum.zip', but checkpoints and live data
+    # will go into a subdirectory named 'ppo_pendulum' to keep things organized.
+    save_dir = Path(t_cfg.model_save_path).parent / Path(t_cfg.model_save_path).stem
     save_dir.mkdir(parents=True, exist_ok=True)
 
+    # --- Setup Callbacks ---
+    # 1. EvalCallback saves the "best" model based on performance on a separate test env
     eval_callback = EvalCallback(
         eval_env,
-        best_model_save_path=str(save_dir / "best"),
+        best_model_save_path=str(save_dir / "best_model"),
         log_path=str(save_dir / "logs"),
         eval_freq=max(t_cfg.n_steps // t_cfg.n_envs, 1) * 5,
         n_eval_episodes=10,
         deterministic=True,
     )
+    
+    # 2. Our custom LiveDashboardCallback for the UI
+    live_dashboard_callback = LiveDashboardCallback(save_dir=save_dir, save_freq=50) # Save a checkpoint every 50 episodes
+    
+    # Combine callbacks into a list
+    callbacks = [eval_callback, live_dashboard_callback]
 
     if t_cfg.model_load_path:
         print(f"Loading existing model from {t_cfg.model_load_path} …")
@@ -105,9 +200,13 @@ def train(
     if t_cfg.tensorboard_log:
         print(f"TensorBoard logs: {t_cfg.tensorboard_log}  "
               f"(run: tensorboard --logdir {t_cfg.tensorboard_log})")
-    model.learn(total_timesteps=t_cfg.total_timesteps, callback=eval_callback)
+        
+    # Pass the list of callbacks to the learn method
+    model.learn(total_timesteps=t_cfg.total_timesteps, callback=callbacks)
+    
+    # Save the final model at the end of the full training run
     model.save(t_cfg.model_save_path)
-    print(f"Model saved to {t_cfg.model_save_path}")
+    print(f"Final model saved to {t_cfg.model_save_path}")
 
     vec_env.close()
     eval_env.close()
@@ -120,7 +219,7 @@ def _parse_args():
     parser.add_argument("--timesteps", type=int, default=500_000)
     parser.add_argument("--n-envs", type=int, default=None,
                         help="Number of parallel envs (default: all cores)")
-    parser.add_argument("--save-path", type=str, default="models/ppo_pendulum")
+    parser.add_argument("--save-path", type=str, default="models/ppo_pendulum.zip")
     parser.add_argument("--load-model", type=str, default="",
                         help="Path to an existing model to continue training")
     parser.add_argument("--tensorboard-log", type=str, default="logs/tensorboard",
