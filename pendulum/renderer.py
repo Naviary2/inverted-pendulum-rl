@@ -72,22 +72,33 @@ class SceneRenderer:
         # Background
         screen.fill(v.bg_color)
 
+        # Pre-compute pixel sizes from metre-based config values
+        cart_w_px      = int(v.cart_width        * v.scale)
+        cart_h_px      = int(v.cart_height       * v.scale)
+        cart_rad_px    = int(v.cart_rad          * v.scale)
+        cart_node_px   = int(v.cart_node_radius  * v.scale)
+        node_rad_px    = int(v.node_radius       * v.scale)
+        node_out_px    = int(v.node_outline_width * v.scale)
+        pend_w_px      = int(v.pendulum_width    * v.scale)
+        track_h_px     = int(v.track_h           * v.scale)
+        track_rad_px   = int(v.track_rad         * v.scale)
+
         # Track
-        track_len_px = int(p_cfg.track_length * v.scale) + v.cart_width + v.cart_node_radius
+        track_len_px = int(p_cfg.track_length * v.scale) + cart_w_px + cart_node_px
         # Create a rectangle centered at (cx, cy)
         track_rect = pygame.Rect(
             cx - track_len_px // 2,  # Left
-            cy - v.track_h // 2,       # Top
+            cy - track_h_px // 2,    # Top
             track_len_px,            # Width
-            v.track_h                  # Height
+            track_h_px               # Height
         )
         # Draw hollow rounded rectangle
         pygame.draw.rect(
             screen,
             v.fg_color,
             track_rect,
-            v.track_thick,             # Thickness (makes it hollow)
-            border_radius=v.track_rad  # Roundness
+            v.track_thick,              # Thickness (makes it hollow)
+            border_radius=track_rad_px  # Roundness
         )
 
         # Define the hard limit based on the track length
@@ -100,10 +111,10 @@ class SceneRenderer:
 
         # Cart rectangle (outlined + translucent fill)
         cart_rect = pygame.Rect(
-            cart_x_px - v.cart_width // 2,
-            cy - v.cart_height // 2,
-            v.cart_width,
-            v.cart_height,
+            cart_x_px - cart_w_px // 2,
+            cy - cart_h_px // 2,
+            cart_w_px,
+            cart_h_px,
         )
 
         # Draw Fill
@@ -111,15 +122,15 @@ class SceneRenderer:
             screen,
             v.node_fill_color,
             cart_rect,
-            border_radius=v.cart_rad  # Roundness
+            border_radius=cart_rad_px  # Roundness
         )
         # Draw hollow rounded rectangle (Outline)
         pygame.draw.rect(
             screen,
             v.fg_color,
             cart_rect,
-            v.track_thick,             # Thickness (makes it hollow)
-            border_radius=v.cart_rad  # Roundness
+            v.track_thick,              # Thickness (makes it hollow)
+            border_radius=cart_rad_px   # Roundness
         )
 
         # --- pendulum links & nodes ---
@@ -130,8 +141,8 @@ class SceneRenderer:
         pivot_x, pivot_y = cart_x_px, cy
 
         # Draw first node
-        pygame.gfxdraw.aacircle(screen, pivot_x, pivot_y, v.cart_node_radius, v.fg_color) ## AA outline
-        pygame.gfxdraw.filled_circle(screen, pivot_x, pivot_y, v.cart_node_radius, v.fg_color) # Filled circle
+        pygame.gfxdraw.aacircle(screen, pivot_x, pivot_y, cart_node_px, v.fg_color) ## AA outline
+        pygame.gfxdraw.filled_circle(screen, pivot_x, pivot_y, cart_node_px, v.fg_color) # Filled circle
 
         for i in range(n):
             theta_i = state[1 + i]
@@ -144,7 +155,7 @@ class SceneRenderer:
                 screen,
                 (pivot_x, pivot_y),
                 (end_x, end_y),
-                v.pendulum_width,
+                pend_w_px,
                 v.fg_color
             )
 
@@ -152,11 +163,11 @@ class SceneRenderer:
             # Using gfxdraw for AA
 
             # 1. Draw Outline (Outer Circle)
-            pygame.gfxdraw.aacircle(screen, end_x, end_y, v.node_radius, v.fg_color) ## AA outline
-            pygame.gfxdraw.filled_circle(screen, end_x, end_y, v.node_radius, v.fg_color) # Filled circle
+            pygame.gfxdraw.aacircle(screen, end_x, end_y, node_rad_px, v.fg_color) ## AA outline
+            pygame.gfxdraw.filled_circle(screen, end_x, end_y, node_rad_px, v.fg_color) # Filled circle
 
             # 2. Draw Fill (Inner Circle)
-            inner_radius = v.node_radius - v.node_outline_width
+            inner_radius = node_rad_px - node_out_px
             pygame.gfxdraw.aacircle(screen, end_x, end_y, inner_radius, v.node_fill_color) # AA outline
             pygame.gfxdraw.filled_circle(screen, end_x, end_y, inner_radius, v.node_fill_color) # Filled circle
 
