@@ -143,7 +143,7 @@ class CartPendulumEnv(gym.Env):
         # Linear reward based on the angle of the pendulum. 0 when hanging down, 1 when perfectly upright.
         theta = mujoco_obs[1]
         theta_normalized = ((theta + np.pi) % (2 * np.pi)) - np.pi
-        reward = (1.0 - (abs(theta_normalized) / np.pi)) * (1.0 - (abs(theta_normalized) / np.pi))
+        reward = 1.0 - (abs(theta_normalized) / np.pi)
 
         # 3. Update the internal state for the visualizer
         self._state = mujoco_obs
