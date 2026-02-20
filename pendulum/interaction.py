@@ -234,6 +234,11 @@ class CartItem(QGraphicsRectItem):
     def mousePressEvent(self, event):
         if event.button() == Qt.MouseButton.LeftButton:
             self.is_dragging = True
+            scene_pos = event.scenePos()
+            target_x = scene_pos.x() / self.v.scale
+            half_track = self.p_cfg.track_length / 2.0
+            target_x = float(np.clip(target_x, -half_track, half_track))
+            self._mujoco_data.mocap_pos[0, 0] = target_x
             self._mujoco_data.eq_active = 1
             self.setCursor(Qt.CursorShape.ClosedHandCursor)
             event.accept()
