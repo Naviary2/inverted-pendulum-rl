@@ -65,7 +65,7 @@ class CartItem(QGraphicsRectItem):
         strut_h = v.cart_strut_height * v.scale
 
         # Strut centre Y position in pixels (cart-local coordinates, Qt Y-down).
-        strut_cy_px = v.cart_strut_center_y * v.scale
+        strut_cy = v.cart_strut_center_y * v.scale
 
         # Struts are angled toward the centre, so the top and bottom wheel
         # centres end up at different distances from the two track rails →
@@ -79,12 +79,12 @@ class CartItem(QGraphicsRectItem):
         #   track top rail   y = −body_h/2
         #   radius = (−body_h/2) − (strut_cy_px − strut_h/2·cos_a)
         #          = strut_h/2·cos_a − strut_cy_px − body_h/2
-        wheel_rad_top = strut_h / 2 * cos_a - strut_cy_px - body_h / 2
+        wheel_rad_top = strut_h / 2 * cos_a - strut_cy - body_h / 2
         # Bottom wheel sits just outside the track's bottom rail.
         #   bottom-wheel centre y = strut_cy_px + strut_h/2·cos_a
         #   track bottom rail   y = body_h/2
         #   radius = (strut_cy_px + strut_h/2·cos_a) − body_h/2
-        wheel_rad_bottom = strut_cy_px + strut_h / 2 * cos_a - body_h / 2
+        wheel_rad_bottom = strut_cy + strut_h / 2 * cos_a - body_h / 2
         if wheel_rad_top <= 0 or wheel_rad_bottom <= 0:
             raise ValueError(
                 f"Wheel radius is non-positive (top={wheel_rad_top:.2f} px, "
@@ -123,7 +123,7 @@ class CartItem(QGraphicsRectItem):
         # ------------------------------------------------------------------
         for sign in (-1, 1):
             strut = QGraphicsRectItem(-strut_w / 2, -strut_h / 2, strut_w, strut_h, self)
-            strut.setPos(sign * (body_w / 2), strut_cy_px)  # centre at cart_strut_center_y
+            strut.setPos(sign * (body_w / 2), strut_cy)  # centre at cart_strut_center_y
             strut.setRotation(-sign * v.cart_strut_angle)   # tilt tops toward centre
             strut.setBrush(QBrush(fg))
             strut.setPen(QPen(Qt.PenStyle.NoPen))
@@ -152,13 +152,13 @@ class CartItem(QGraphicsRectItem):
         )
         
         # Create a darkened version of the wheel pixmap for the locked state
-        dark_pixmap = wheel_pixmap.copy()
-        painter = QPainter(dark_pixmap)
-        painter.setCompositionMode(QPainter.CompositionMode.CompositionMode_SourceAtop)
-        painter.fillRect(dark_pixmap.rect(), _rgb(v.cart_locked_wheel_tint))
-        painter.end()
-        self._normal_wheel_pixmap = wheel_pixmap
-        self._locked_wheel_pixmap = dark_pixmap
+        # dark_pixmap = wheel_pixmap.copy()
+        # painter = QPainter(dark_pixmap)
+        # painter.setCompositionMode(QPainter.CompositionMode.CompositionMode_SourceAtop)
+        # painter.fillRect(dark_pixmap.rect(), _rgb(v.cart_locked_wheel_tint))
+        # painter.end()
+        # self._normal_wheel_pixmap = wheel_pixmap
+        # self._locked_wheel_pixmap = dark_pixmap
 
         # Each entry is (pixmap_item, wheel_radius_in_metres, spin_direction).
         # spin_direction is +1 for top wheels (contact at wheel bottom → clockwise)
@@ -171,9 +171,9 @@ class CartItem(QGraphicsRectItem):
             #   top end  (0, −strut_h/2) rotated by −sx·angle about strut centre
             #   bot end  (0, +strut_h/2) rotated by −sx·angle about strut centre
             top_x = strut_cx - sx * strut_h / 2 * sin_a
-            top_y = strut_cy_px - strut_h / 2 * cos_a
+            top_y = strut_cy - strut_h / 2 * cos_a
             bot_x = strut_cx + sx * strut_h / 2 * sin_a
-            bot_y = strut_cy_px + strut_h / 2 * cos_a
+            bot_y = strut_cy + strut_h / 2 * cos_a
 
             w_top = QGraphicsPixmapItem(wheel_pixmap_top, self)
             # Position so that the pixmap centre is at (top_x, top_y)
