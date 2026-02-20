@@ -96,6 +96,8 @@ class PendulumWindow(QMainWindow):
             self.obs, _ = self.env.reset()
             self._warming_up = True
             QTimer.singleShot(500, self._end_warmup)
+        elif event.key() == Qt.Key.Key_G:
+            self._scene._cart.toggle_lock()
         elif event.key() == Qt.Key.Key_F:
             self._scene._force_circle.toggle()
             # Sync force circle to current cursor position immediately
@@ -112,7 +114,7 @@ class PendulumWindow(QMainWindow):
 
         cart = self._scene._cart
 
-        if cart.is_dragging:
+        if cart.is_dragging or cart.is_locked:
             action = np.array([0.0], dtype=np.float32)
         elif self.model is not None:
             action, _ = self.model.predict(self.obs, deterministic=True)
@@ -126,7 +128,7 @@ class PendulumWindow(QMainWindow):
 
         self.obs, _reward, terminated, truncated, _ = self.env.step(action)
 
-        if (terminated or truncated) and not cart.is_dragging:
+        if (terminated or truncated) and not cart.is_dragging and not cart.is_locked:
             self.obs, _ = self.env.reset()
 
         self._scene.sync_from_state(self.env._state)

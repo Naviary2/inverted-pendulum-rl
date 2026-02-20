@@ -55,6 +55,7 @@ python -m pendulum.visualize --model models/ppo_pendulum
 While the visualizer is running:
 
 - **R** — reset the environment
+- **G** — toggle cart lock (free fall pendulums)
 - **Click + drag** the cart to interact with the simulation manually
 
 ## Configuration
