@@ -25,7 +25,7 @@
 
 		<body name="cart" pos="0 0 0">
 			<joint axis="1 0 0" limited="true" name="slider" pos="0 0 0" range="-{half_track} {half_track}" type="slide"/>
-			<geom name="cart" pos="0 0 0" size="0.1 0.05 0.02" type="box" mass="5" contype="1"/>
+			<geom name="cart" pos="0 0 0" size="0.1 0.05 0.02" type="box" mass="4" contype="1"/>
 			<body name="pole" pos="0 0 0">
 				<joint axis="0 1 0" name="hinge" pos="0 0 0" type="hinge" limited="false"/>
 				<!-- Pole rod has no collision (contype=0), only the tip node collides -->
