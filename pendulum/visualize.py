@@ -109,27 +109,25 @@ class PendulumWindow(QMainWindow):
     # -- simulation tick ----------------------------------------------------
 
     def _tick(self):
-        if self._warming_up:
-            return
+        if not self._warming_up:
+            cart = self._scene._cart
 
-        cart = self._scene._cart
+            if cart.is_dragging or cart.is_locked:
+                action = np.array([0.0], dtype=np.float32)
+            elif self.model is not None:
+                action, _ = self.model.predict(self.obs, deterministic=True)
+            else:
+                # Random choice between -1 or 1
+                # action = np.random.choice([-1.0, 1.0], size=(1,), replace=True).astype(np.float32)
+                # Random continuous action in [-1, 1]
+                action = np.random.uniform(-1.0, 1.0, size=(1,)).astype(np.float32)
+                # No action
+                # action = np.array([0.0]).astype(np.float32)
 
-        if cart.is_dragging or cart.is_locked:
-            action = np.array([0.0], dtype=np.float32)
-        elif self.model is not None:
-            action, _ = self.model.predict(self.obs, deterministic=True)
-        else:
-            # Random choice between -1 or 1
-            # action = np.random.choice([-1.0, 1.0], size=(1,), replace=True).astype(np.float32)
-            # Random continuous action in [-1, 1]
-            action = np.random.uniform(-1.0, 1.0, size=(1,)).astype(np.float32)
-            # No action
-            # action = np.array([0.0]).astype(np.float32)
+            self.obs, _reward, terminated, truncated, _ = self.env.step(action)
 
-        self.obs, _reward, terminated, truncated, _ = self.env.step(action)
-
-        if (terminated or truncated) and not cart.is_dragging and not cart.is_locked:
-            self.obs, _ = self.env.reset()
+            if (terminated or truncated) and not cart.is_dragging and not cart.is_locked:
+                self.obs, _ = self.env.reset()
 
         self._scene.sync_from_state(self.env._state)
 
