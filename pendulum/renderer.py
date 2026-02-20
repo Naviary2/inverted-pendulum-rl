@@ -88,7 +88,7 @@ class SimulationWidget(QGraphicsObject):
         painter.setPen(QPen(Qt.PenStyle.NoPen))
         for i in range(layers, 0, -1):
             t = i / layers                          # 1.0 (outermost) → 0.125 (innermost)
-            alpha = int(120 * (1 - t) * t * 4)     # bell-curve alpha peak in the middle
+            alpha = int(10 * (1 - t) * t * 4)     # bell-curve alpha peak in the middle
             expand = spread * t
             shadow_rect = self._rect.adjusted(-expand * 0.4, -expand * 0.4,
                                                expand * 0.4,  expand * 0.6)
