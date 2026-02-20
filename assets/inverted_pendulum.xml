@@ -2,7 +2,7 @@
 
 <mujoco model="inverted pendulum">
 	<compiler inertiafromgeom="true"/>
-		<default>
+	<default>
 		<!-- Joint damping of 0 -->
 		<joint armature="0" damping="0" limited="true"/>
 		<!-- Set sliding friction, torsional friction, and rolling friction to 0 -->
@@ -12,8 +12,12 @@
 	<option gravity="0 0 -9.81" integrator="RK4"/>
 	<size nkey="5" nuser_jnt="1"/>
 	<worldbody>
+		<!-- This is an invisible body that is not affected by physics. -->
+		<!-- We will move it to follow the mouse cursor. -->
+		<body name="target_mocap" mocap="true" pos="0 0 0" />
+
 		<body name="cart" pos="0 0 0">
-		<!-- CHANGE RANGE WITH THE CONFIG.PY!!!!!! -->
+			<!-- CHANGE RANGE WITH THE CONFIG.PY!!!!!! -->
 			<joint axis="1 0 0" limited="true" name="slider" pos="0 0 0" range="-2.4 2.4" type="slide"/>
 			<geom name="cart" pos="0 0 0" size="0.1 0.05 0.02" type="box" mass="1"/>
 			<body name="pole" pos="0 0 0">
@@ -26,4 +30,13 @@
 	<actuator>
 		<motor gear="1" joint="slider" name="slide"/>
 	</actuator>
+
+	<!-- DRAGGING -->
+	<equality>
+		<!-- This weld constraint forces the "cart" body to match the position -->
+		<!-- of the "target_mocap" body when it is active. -->
+		<!-- It is disabled by default (active="false"). -->
+		<weld name="mocap_weld" body1="cart" body2="target_mocap" active="false" solimp="0.9 0.95 0.001" solref="0.02 1"></weld>
+	</equality>
+	<!-- ======================================================== -->
 </mujoco>

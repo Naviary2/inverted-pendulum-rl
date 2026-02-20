@@ -27,6 +27,7 @@ import pygame.gfxdraw
 
 from .config import PendulumConfig, TrainingConfig, VisualizationConfig
 from .environment import CartPendulumEnv
+from .interaction import CartDragController
 
 
 def _load_model(path: str):
@@ -90,6 +91,9 @@ async def _async_run(
     limit_frame_duration = 1.0 / p_cfg.fps
     next_frame_target = 0.0
 
+    # Initialize the drag controller
+    drag_controller = CartDragController(env, p_cfg, v)
+
     while running:
         # --- Framerate Limiter ---
         # Logic from: https://glyph.twistedmatrix.com/2022/02/a-better-pygame-mainloop.html
@@ -100,33 +104,47 @@ async def _async_run(
                 await asyncio.sleep(delay)
             next_frame_target = time.time() + limit_frame_duration
 
-        for event in pygame.event.get():
+        # Calculate screen geometry for rendering & input
+        cx = v.width // 2
+        cy = v.height // 2
+        mouse_pos = pygame.mouse.get_pos()
+        
+        # Fetch all events once per frame
+        events = pygame.event.get()
+
+        # Handle General Events
+        for event in events:
             if event.type == pygame.QUIT:
                 running = False
             elif event.type == pygame.KEYDOWN and event.key == pygame.K_r:
                 obs, _ = env.reset()
+                
+        # --- Manual Interaction ---
+        drag_action = drag_controller.update(events, mouse_pos, cx, cy)
 
         # --- action ---
-        # Apply random force
-        if model is not None:
-            action, _ = model.predict(obs, deterministic=True)
+        if drag_action is not None:
+            # Overridden by manual dragging
+            action = drag_action
         else:
-            # Randomly choose max-left or max-right force.
-            action = np.random.choice([-1, 1], size=(1,))
-            # action = np.random.choice([-0.1, 0.1], size=(1,))
-            # Apply no force
-            # action = np.array([0.0])
+            if model is not None:
+                # Normal AI control
+                action, _ = model.predict(obs, deterministic=True)
+            else:
+                # Randomly choose max-left or max-right force.
+                action = np.random.choice([-1, 1], size=(1,))
+                # action = np.random.choice([-0.1, 0.1], size=(1,))
+                # Apply no force
+                action = np.array([0.0])
 
         obs, _reward, terminated, truncated, _ = env.step(action)
 
         if terminated or truncated:
-            obs, _ = env.reset()
+            if not drag_controller.is_dragging:
+                obs, _ = env.reset()
 
         # --- draw ---
         screen.fill(v.bg_color)
-
-        cx = v.width // 2   # centre x of screen
-        cy = v.height // 2  # vertical centre (track line)
 
         # Track
         track_len_px = int(p_cfg.track_length * v.scale) + v.cart_width + v.cart_node_radius
@@ -146,9 +164,8 @@ async def _async_run(
             border_radius=v.track_rad  # Roundness
         )
 
-        # Cart position
+        # Cart position (Recalculate for rendering after step)
         state = env._state
-        cart_x_px = cx + int(state[0] * v.scale)
 
         # Define the hard limit based on the track length
         half_length = p_cfg.track_length / 2.0
