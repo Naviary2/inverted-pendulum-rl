@@ -97,4 +97,4 @@ class VisualizationConfig:
     widget_theme_color: tuple = (70, 140, 255)  # blue accent color
     # widget_theme_color: tuple = (50, 160, 30)  # green
     widget_outline_width: float = 0.02  # m  outline stroke width
-    widget_shadow_blur: float = 0.25     # m  drop-shadow blur radius
+    widget_shadow_blur: float = 0.12     # m  drop-shadow blur radius
