@@ -86,6 +86,8 @@ def train(
         verbose=1,
     )
 
+    # print(model.policy) # Print the policy architecture (number of inputs, hidden layers, neurons, outputs)
+
     print(f"Training with {t_cfg.n_envs} parallel environments "
           f"for {t_cfg.total_timesteps:,} timesteps …")
     model.learn(total_timesteps=t_cfg.total_timesteps, callback=eval_callback)

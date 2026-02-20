@@ -29,7 +29,7 @@ class PendulumConfig:
 
     # Collision geometry
     node_radius: float = 0.13      # m  (tip node sphere radius)
-    force_circle_radius: float = 0.16  # m  (force circle sphere radius)
+    force_circle_radius: float = 0.24  # m  (force circle sphere radius)
 
     def __post_init__(self):
         assert len(self.link_lengths) == self.num_links
@@ -76,16 +76,25 @@ class VisualizationConfig:
     # (tops lean inward, bottoms lean outward)
     cart_strut_angle: float = -20.0
 
-    node_fill_color: tuple = (50, 160, 30)
     node_outline_width: float = 0.022 # m
 
     pendulum_width: float = 0.045 # m
-    bg_color: tuple = (35, 35, 35) # grey
+    bg_color: tuple = (60, 60, 60) # grey
     fg_color: tuple = (255, 255, 255) # white
 
     # Force circle (toggled with "F" key)
-    force_circle_thickness: float = 0.016  # m
+    force_circle_thickness: float = 0.02  # m
     force_circle_color: tuple = (255, 0, 0)  # red
 
     # Cart lock (toggled with "G" key)
     cart_locked_wheel_tint: tuple = (0, 0, 0, 100)  # semi-transparent black overlay
+
+    # Simulation widget (rounded-rect container for track / cart / pendulums)
+    widget_padding_x: float = 1.0      # m  horizontal padding (left / right)
+    widget_padding_y: float = 0.25      # m  vertical padding (top / bottom)
+    widget_bg_color: tuple = (35, 35, 35)  # slightly darker than bg_color
+    widget_border_radius: float = 0.12  # m  corner roundness
+    widget_theme_color: tuple = (70, 140, 255)  # blue accent color
+    # widget_theme_color: tuple = (50, 160, 30)  # green
+    widget_outline_width: float = 0.02  # m  outline stroke width
+    widget_shadow_blur: float = 0.25     # m  drop-shadow blur radius

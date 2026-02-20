@@ -6,11 +6,12 @@ from __future__ import annotations
 
 import numpy as np
 
-from PySide6.QtCore import Qt, QLineF
+from PySide6.QtCore import Qt, QLineF, QRectF
 from PySide6.QtGui import QBrush, QColor, QPainter, QPainterPath, QPen
 from PySide6.QtWidgets import (
     QGraphicsEllipseItem,
     QGraphicsLineItem,
+    QGraphicsObject,
     QGraphicsPathItem,
     QGraphicsScene,
     QGraphicsView,
@@ -24,6 +25,81 @@ from .interaction import CartItem, ForceCircleItem
 def _rgb(t: tuple) -> QColor:
     """Convert an (r, g, b) or (r, g, b, a) tuple to a QColor."""
     return QColor(*t)
+
+
+class SimulationWidget(QGraphicsObject):
+    """Rounded-rect widget that visually contains the track, cart, and pendulums.
+
+    Constants (all lengths in metres):
+        widget_padding_x      - left / right padding inside the rounded rect
+        widget_padding_y      - top / bottom padding inside the rounded rect
+        widget_bg_color       - background fill colour (slightly darker than scene bg)
+        widget_border_radius  - corner radius of the rounded rect
+        widget_theme_color    - outline / accent colour
+        widget_outline_width  - stroke width of the outline
+        widget_shadow_blur    - blur radius of the drop shadow
+    """
+
+    def __init__(self, p_cfg, v, parent=None):
+        super().__init__(parent)
+        self._v = v
+
+        # Widget half-width: half the physics track + cart-body margin + h-padding
+        # The margin uses 0.8 × cart_body_width because the full track visual width
+        # adds 1.6 × body_w (one full body width split equally on each side).
+        half_w = (
+            p_cfg.track_length / 2
+            + v.cart_body_width * 0.8
+            + v.widget_padding_x
+        ) * v.scale
+
+        # Widget top edge: total pendulum height above cart + node width + v-padding
+        total_link_len = sum(p_cfg.link_lengths) + p_cfg.node_radius
+        top = -(total_link_len + v.widget_padding_y) * v.scale
+
+        # Widget bottom edge: total pendulum height below cart + node width + v-padding
+        bottom = -top
+
+        self._rect = QRectF(-half_w, top, 2 * half_w, bottom - top)
+
+        # Shadow spread in pixels, pre-computed once from the config constant.
+        self._shadow_spread = v.widget_shadow_blur * v.scale
+
+    def boundingRect(self) -> QRectF:
+        # Expand by half the outline pen width so the stroke is never clipped,
+        # and by the full shadow spread so the shadow is never clipped either.
+        half_pen = self._v.widget_outline_width * self._v.scale / 2
+        spread = self._shadow_spread
+        margin = half_pen + spread
+        return self._rect.adjusted(-margin, -margin, margin, margin)
+
+    def paint(self, painter: QPainter, option, widget=None) -> None:  # noqa: ARG002
+        v = self._v
+        radius_px = v.widget_border_radius * v.scale
+
+        # --- Shadow (painted statically; does NOT re-run when children move) ---
+        # Layered semi-transparent rounded rects approximate a soft drop shadow
+        # without using QGraphicsDropShadowEffect (which forces a full offscreen
+        # re-render every frame when any child item changes position).
+        layers = 8
+        spread = self._shadow_spread
+        painter.setPen(QPen(Qt.PenStyle.NoPen))
+        for i in range(layers, 0, -1):
+            t = i / layers                          # 1.0 (outermost) → 0.125 (innermost)
+            alpha = int(10 * (1 - t) * t * 4)     # bell-curve alpha peak in the middle
+            expand = spread * t
+            shadow_rect = self._rect.adjusted(-expand * 0.4, -expand * 0.4,
+                                               expand * 0.4,  expand * 0.6)
+            painter.setBrush(QBrush(QColor(0, 0, 0, alpha)))
+            painter.drawRoundedRect(shadow_rect, radius_px + expand * 0.4,
+                                                  radius_px + expand * 0.4)
+
+        # --- Widget background + themed outline ---
+        pen = QPen(_rgb(v.widget_theme_color), v.widget_outline_width * v.scale)
+        pen.setJoinStyle(Qt.PenJoinStyle.RoundJoin)
+        painter.setPen(pen)
+        painter.setBrush(QBrush(_rgb(v.widget_bg_color)))
+        painter.drawRoundedRect(self._rect, radius_px, radius_px)
 
 
 class PendulumScene(QGraphicsScene):
@@ -42,21 +118,24 @@ class PendulumScene(QGraphicsScene):
 
         fg = _rgb(v.fg_color)
 
-        # --- Track ---
+        # --- Simulation widget (rounded-rect container) ---
+        self._widget = SimulationWidget(p_cfg, v)
+        self.addItem(self._widget)
+
+        # --- Track (child of widget) ---
         # Width: physics track length + one full cart body width for visual margin
         body_w_px = v.cart_body_width * v.scale
-        track_len = p_cfg.track_length * v.scale + body_w_px * 1.6 # plus some constant for padding
+        track_len = p_cfg.track_length * v.scale + body_w_px * 1.6  # plus some constant for padding
         track_h = v.track_h * v.scale
         track_path = QPainterPath()
         track_rad_px = v.track_rad * v.scale
         track_path.addRoundedRect(-track_len / 2, -track_h / 2, track_len, track_h, track_rad_px, track_rad_px)
-        self._track = QGraphicsPathItem(track_path)
+        self._track = QGraphicsPathItem(track_path, self._widget)
         pen_track = QPen(fg, v.track_thick * v.scale)
         self._track.setPen(pen_track)
         self._track.setBrush(Qt.BrushStyle.NoBrush)
-        self.addItem(self._track)
 
-        # --- Pendulum links (lines) and tip nodes ---
+        # --- Pendulum links (lines) and tip nodes (children of widget) ---
         n = p_cfg.num_links
         node_rad = p_cfg.node_radius * v.scale
         node_inner = node_rad - v.node_outline_width * v.scale
@@ -67,38 +146,33 @@ class PendulumScene(QGraphicsScene):
         self._nodes_inner: list[QGraphicsEllipseItem] = []
 
         for _ in range(n):
-            line = QGraphicsLineItem()
+            line = QGraphicsLineItem(self._widget)
             pen = QPen(fg, pend_w, Qt.PenStyle.SolidLine, Qt.PenCapStyle.RoundCap)
             line.setPen(pen)
-            self.addItem(line)
             self._links.append(line)
 
             # outer node
-            outer = QGraphicsEllipseItem(-node_rad, -node_rad, 2 * node_rad, 2 * node_rad)
+            outer = QGraphicsEllipseItem(-node_rad, -node_rad, 2 * node_rad, 2 * node_rad, self._widget)
             outer.setBrush(QBrush(fg))
             outer.setPen(QPen(Qt.PenStyle.NoPen))
-            self.addItem(outer)
             self._nodes_outer.append(outer)
 
             # inner node
-            inner = QGraphicsEllipseItem(-node_inner, -node_inner, 2 * node_inner, 2 * node_inner)
-            inner.setBrush(QBrush(_rgb(v.node_fill_color)))
+            inner = QGraphicsEllipseItem(-node_inner, -node_inner, 2 * node_inner, 2 * node_inner, self._widget)
+            inner.setBrush(QBrush(_rgb(v.widget_theme_color)))
             inner.setPen(QPen(Qt.PenStyle.NoPen))
-            self.addItem(inner)
             self._nodes_inner.append(inner)
 
 
-        # --- Cart (body + struts + wheels + pivot node all in one item) ---
-        self._cart = CartItem(env, p_cfg, v)
-        self.addItem(self._cart)
+        # --- Cart (child of widget) ---
+        self._cart = CartItem(env, p_cfg, v, parent=self._widget)
 
         # Track the previous cart x position so we can compute delta for wheel rotation.
         # None on the first frame to avoid a large spurious rotation.
         self._prev_cart_x: float | None = None
 
-        # --- Force circle ---
-        self._force_circle = ForceCircleItem(env, p_cfg, v)
-        self.addItem(self._force_circle)
+        # --- Force circle (child of widget) ---
+        self._force_circle = ForceCircleItem(env, p_cfg, v, parent=self._widget)
 
     # ---------------------------------------------------------------
 
