@@ -79,7 +79,7 @@ class VisualizationConfig:
     node_outline_width: float = 0.022 # m
 
     pendulum_width: float = 0.045 # m
-    bg_color: tuple = (50, 50, 50) # grey
+    bg_color: tuple = (60, 60, 60) # grey
     fg_color: tuple = (255, 255, 255) # white
 
     # Force circle (toggled with "F" key)
