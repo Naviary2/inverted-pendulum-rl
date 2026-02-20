@@ -76,7 +76,7 @@ class PendulumWindow(QMainWindow):
         # Initial sync
         self._scene.sync_from_state(env._state)
 
-        # Startup delay: hold physics/interaction for 0.5 s after window opens
+        # Startup delay: hold physics/interaction for 0.5s after window opens
         QTimer.singleShot(500, self._end_warmup)
 
         # Timer at config fps
