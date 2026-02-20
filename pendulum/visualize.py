@@ -93,6 +93,8 @@ class PendulumWindow(QMainWindow):
             cursor_pos = self._view.mapFromGlobal(self.cursor().pos())
             scene_pos = self._view.mapToScene(cursor_pos)
             self._scene._force_circle.update_position(scene_pos.x(), scene_pos.y())
+        elif event.key() == Qt.Key.Key_G:
+            self._scene._cart.toggle_lock()
         super().keyPressEvent(event)
 
     # -- simulation tick ----------------------------------------------------
@@ -100,7 +102,7 @@ class PendulumWindow(QMainWindow):
     def _tick(self):
         cart = self._scene._cart
 
-        if cart.is_dragging:
+        if cart.is_dragging or cart.is_locked:
             action = np.array([0.0], dtype=np.float32)
         elif self.model is not None:
             action, _ = self.model.predict(self.obs, deterministic=True)
@@ -109,7 +111,7 @@ class PendulumWindow(QMainWindow):
 
         self.obs, _reward, terminated, truncated, _ = self.env.step(action)
 
-        if (terminated or truncated) and not cart.is_dragging:
+        if (terminated or truncated) and not cart.is_dragging and not cart.is_locked:
             self.obs, _ = self.env.reset()
 
         self._scene.sync_from_state(self.env._state)
