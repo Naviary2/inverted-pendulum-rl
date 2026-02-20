@@ -11,7 +11,6 @@ import numpy as np
 from PySide6.QtCore import Qt, QLineF, QRectF
 from PySide6.QtGui import QBrush, QColor, QPainter, QPainterPath, QPen
 from PySide6.QtWidgets import (
-    QGraphicsDropShadowEffect,
     QGraphicsEllipseItem,
     QGraphicsLineItem,
     QGraphicsObject,
@@ -65,21 +64,39 @@ class SimulationWidget(QGraphicsObject):
 
         self._rect = QRectF(-half_w, top, 2 * half_w, bottom - top)
 
-        # Drop shadow (blur radius derived from widget_shadow_blur constant)
-        shadow = QGraphicsDropShadowEffect()
-        shadow.setBlurRadius(v.widget_shadow_blur * v.scale)
-        shadow.setOffset(0, 0)
-        shadow.setColor(QColor(0, 0, 0, 180))
-        self.setGraphicsEffect(shadow)
+        # Shadow spread in pixels, pre-computed once from the config constant.
+        self._shadow_spread = v.widget_shadow_blur * v.scale
 
     def boundingRect(self) -> QRectF:
-        # Expand by half the outline pen width so the stroke is never clipped
+        # Expand by half the outline pen width so the stroke is never clipped,
+        # and by the full shadow spread so the shadow is never clipped either.
         half_pen = self._v.widget_outline_width * self._v.scale / 2
-        return self._rect.adjusted(-half_pen, -half_pen, half_pen, half_pen)
+        spread = self._shadow_spread
+        margin = half_pen + spread
+        return self._rect.adjusted(-margin, -margin, margin, margin)
 
     def paint(self, painter: QPainter, option, widget=None) -> None:  # noqa: ARG002
         v = self._v
         radius_px = v.widget_border_radius * v.scale
+
+        # --- Shadow (painted statically; does NOT re-run when children move) ---
+        # Layered semi-transparent rounded rects approximate a soft drop shadow
+        # without using QGraphicsDropShadowEffect (which forces a full offscreen
+        # re-render every frame when any child item changes position).
+        layers = 8
+        spread = self._shadow_spread
+        painter.setPen(QPen(Qt.PenStyle.NoPen))
+        for i in range(layers, 0, -1):
+            t = i / layers                          # 1.0 (outermost) → 0.125 (innermost)
+            alpha = int(120 * (1 - t) * t * 4)     # bell-curve alpha peak in the middle
+            expand = spread * t
+            shadow_rect = self._rect.adjusted(-expand * 0.4, -expand * 0.4,
+                                               expand * 0.4,  expand * 0.6)
+            painter.setBrush(QBrush(QColor(0, 0, 0, alpha)))
+            painter.drawRoundedRect(shadow_rect, radius_px + expand * 0.4,
+                                                  radius_px + expand * 0.4)
+
+        # --- Widget background + themed outline ---
         pen = QPen(_rgb(v.widget_theme_color), v.widget_outline_width * v.scale)
         pen.setJoinStyle(Qt.PenJoinStyle.RoundJoin)
         painter.setPen(pen)
