@@ -7,11 +7,11 @@ from __future__ import annotations
 import numpy as np
 
 from PySide6.QtCore import Qt, QLineF
-from PySide6.QtGui import QBrush, QColor, QPainter, QPen
+from PySide6.QtGui import QBrush, QColor, QPainter, QPainterPath, QPen
 from PySide6.QtWidgets import (
     QGraphicsEllipseItem,
     QGraphicsLineItem,
-    QGraphicsRectItem,
+    QGraphicsPathItem,
     QGraphicsScene,
     QGraphicsView,
 )
@@ -47,7 +47,10 @@ class PendulumScene(QGraphicsScene):
         body_w_px = v.cart_body_width * v.scale
         track_len = p_cfg.track_length * v.scale + body_w_px
         track_h = v.track_h * v.scale
-        self._track = QGraphicsRectItem(-track_len / 2, -track_h / 2, track_len, track_h)
+        track_path = QPainterPath()
+        track_rad_px = v.track_rad * v.scale
+        track_path.addRoundedRect(-track_len / 2, -track_h / 2, track_len, track_h, track_rad_px, track_rad_px)
+        self._track = QGraphicsPathItem(track_path)
         pen_track = QPen(fg, v.track_thick * v.scale)
         self._track.setPen(pen_track)
         self._track.setBrush(Qt.BrushStyle.NoBrush)

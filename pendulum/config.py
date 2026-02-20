@@ -63,8 +63,8 @@ class VisualizationConfig:
     scale: float = 200.0 # pixels per metre
 
     track_h: float = 0.08 # m  (track height)
-    track_thick: float = 0.025 # m (track outline thickness)
-    track_rad: float = 0.032 # m  (corner roundness)
+    track_thick: float = 0.02 # m (track outline thickness)
+    track_rad: float = 0.04 # m  (corner roundness)
 
     # Cart body (white rectangle behind pivot node)
     cart_body_width: float = 0.57
