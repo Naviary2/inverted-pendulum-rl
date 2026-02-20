@@ -15,11 +15,11 @@
 		<body name="cart" pos="0 0 0">
 		<!-- CHANGE RANGE WITH THE CONFIG.PY!!!!!! -->
 			<joint axis="1 0 0" limited="true" name="slider" pos="0 0 0" range="-2.4 2.4" type="slide"/>
-			<geom name="cart" pos="0 0 0" size="0.1 0.05 0.02" type="box"/>
+			<geom name="cart" pos="0 0 0" size="0.1 0.05 0.02" type="box" mass="1"/>
 			<body name="pole" pos="0 0 0">
 				<joint axis="0 1 0" name="hinge" pos="0 0 0" type="hinge" limited="false"/>
 				<!-- CHANGE LENGTH AND MASS WITH THE CONFIG.PY!!!!!! -->
-				<geom fromto="0 0 0 0.001 0 1.0" name="pole" size="0.049" mass="1" type="capsule"/>
+				<geom fromto="0 0 0 0.001 0 1.0" name="pole" size="0.049" mass="0.2" type="capsule"/>
 			</body>
 		</body>
 	</worldbody>
