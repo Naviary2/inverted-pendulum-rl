@@ -21,14 +21,14 @@ class PendulumConfig:
 
     # Links (lists allow N-link pendulums)
     num_links: int = 1
-    link_lengths: List[float] = field(default_factory=lambda: [1.0])   # m
+    link_lengths: List[float] = field(default_factory=lambda: [1.0])   # Pendulum lengths in metres. Length of link i is link_lengths[i].
 
     # Physics
-    gravity: float = 9.81            # m/s²
-    force_limit: float = 10.0        # N  (max force applied to cart)
+    gravity: float = 9.81            # m/s² ~8 Looks normal
+    force_limit: float = 8.0        # N  (max force applied to cart)
 
     # Collision geometry
-    node_radius: float = 0.096      # m  (tip node sphere radius)
+    node_radius: float = 0.13      # m  (tip node sphere radius)
     force_circle_radius: float = 0.16  # m  (force circle sphere radius)
 
     def __post_init__(self):
@@ -60,22 +60,22 @@ class VisualizationConfig:
     width: int = 1920
     height: int = 1080
     fps: int = 60
-    scale: float = 250.0             # pixels per metre
+    scale: float = 200.0 # pixels per metre
 
-    track_h: float = 0.06           # m  (track height, ~half the original)
-    track_thick: int = 5            # px (constant line thickness, ~50% thicker than original)
-    track_rad: float = 0.032        # m  (corner roundness)
+    track_h: float = 0.08 # m  (track height)
+    track_thick: int = 5 # px (constant line thickness, ~50% thicker than original)
+    track_rad: float = 0.032 # m  (corner roundness)
 
     # Cart body (white rectangle behind pivot node)
-    cart_body_width_nd: float = 3.0     # body width in node diameters (nd)
+    cart_body_width: float = 0.57
     # Strut rectangles on the left and right sides of the cart body
-    cart_strut_width_frac: float = 2 / 3  # strut width as a fraction of track height
-    cart_strut_height_nd: float = 2.0   # strut height in node diameters
+    cart_strut_width: float = 0.07
+    cart_strut_height: float = 0.3
 
     node_fill_color: tuple = (50, 160, 30)
-    node_outline_width: float = 0.016  # m
+    node_outline_width: float = 0.022 # m
 
-    pendulum_width: float = 0.032   # m
+    pendulum_width: float = 0.045 # m
     bg_color: tuple = (35, 35, 35) # grey
     fg_color: tuple = (255, 255, 255) # white
 

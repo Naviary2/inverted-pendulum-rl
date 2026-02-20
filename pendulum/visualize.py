@@ -120,9 +120,9 @@ class PendulumWindow(QMainWindow):
                 # Random choice between -1 or 1
                 # action = np.random.choice([-1.0, 1.0], size=(1,), replace=True).astype(np.float32)
                 # Random continuous action in [-1, 1]
-                action = np.random.uniform(-1.0, 1.0, size=(1,)).astype(np.float32)
+                # action = np.random.uniform(-1.0, 1.0, size=(1,)).astype(np.float32)
                 # No action
-                # action = np.array([0.0]).astype(np.float32)
+                action = np.array([0.0]).astype(np.float32)
 
             self.obs, _reward, terminated, truncated, _ = self.env.step(action)
 

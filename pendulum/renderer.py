@@ -44,7 +44,7 @@ class PendulumScene(QGraphicsScene):
 
         # --- Track ---
         # Width: physics track length + one full cart body width for visual margin
-        body_w_px = v.cart_body_width_nd * 2 * p_cfg.node_radius * v.scale
+        body_w_px = v.cart_body_width * v.scale
         track_len = p_cfg.track_length * v.scale + body_w_px
         track_h = v.track_h * v.scale
         self._track = QGraphicsRectItem(-track_len / 2, -track_h / 2, track_len, track_h)
@@ -52,14 +52,6 @@ class PendulumScene(QGraphicsScene):
         self._track.setPen(pen_track)
         self._track.setBrush(Qt.BrushStyle.NoBrush)
         self.addItem(self._track)
-
-        # --- Cart (body + struts + wheels + pivot node all in one item) ---
-        self._cart = CartItem(env, p_cfg, v)
-        self.addItem(self._cart)
-
-        # Track the previous cart x position so we can compute delta for wheel rotation.
-        # None on the first frame to avoid a large spurious rotation.
-        self._prev_cart_x: float | None = None
 
         # --- Pendulum links (lines) and tip nodes ---
         n = p_cfg.num_links
@@ -91,6 +83,15 @@ class PendulumScene(QGraphicsScene):
             inner.setPen(QPen(Qt.PenStyle.NoPen))
             self.addItem(inner)
             self._nodes_inner.append(inner)
+
+
+        # --- Cart (body + struts + wheels + pivot node all in one item) ---
+        self._cart = CartItem(env, p_cfg, v)
+        self.addItem(self._cart)
+
+        # Track the previous cart x position so we can compute delta for wheel rotation.
+        # None on the first frame to avoid a large spurious rotation.
+        self._prev_cart_x: float | None = None
 
         # --- Force circle ---
         self._force_circle = ForceCircleItem(env, p_cfg, v)

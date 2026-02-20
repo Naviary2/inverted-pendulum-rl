@@ -29,12 +29,12 @@ def _rgb(t: tuple) -> QColor:
 
 
 class CartItem(QGraphicsRectItem):
-    """Redesigned cart with white body, side struts, rolling wheels, and a pivot node.
+    """Cart with white body, side struts, rolling wheels, and a pivot node.
 
     Visual layers (back to front):
       1. Wheels (QGraphicsPixmapItem, behind parent via ItemStacksBehindParent)
       2. Struts (QGraphicsRectItem, behind parent via ItemStacksBehindParent)
-      3. Cart body – the parent QGraphicsRectItem (white rectangle)
+      3. Cart body - the parent QGraphicsRectItem (white rectangle)
       4. Pivot node outer circle  (white, matches pendulum-node outline)
       5. Pivot node inner circle  (coloured, matches pendulum-node fill)
 
@@ -57,22 +57,22 @@ class CartItem(QGraphicsRectItem):
         track_h_px = v.track_h * v.scale
 
         # Cart body: 3 node-diameters wide, track-height tall
-        body_w = v.cart_body_width_nd * 2 * node_rad_px
+        body_w = v.cart_body_width * v.scale
         body_h = track_h_px
 
         # Strut rectangles on the left/right sides of the body
-        strut_w = v.cart_strut_width_frac * track_h_px
-        strut_h = v.cart_strut_height_nd * 2 * node_rad_px
+        strut_w = v.cart_strut_width * v.scale
+        strut_h = v.cart_strut_height * v.scale
 
         # Wheel radius: edge of wheel touches track edge
         # Wheel centre is at ±strut_h/2 (top/bottom of strut).
-        # Track edge is at ±track_h_px/2.
+        # Track edge is at track_h_px/2.
         # wheel_radius = strut_h/2 − track_h_px/2
-        wheel_rad_px = strut_h / 2 - track_h_px / 2
-        if wheel_rad_px <= 0:
+        wheel_rad = strut_h / 2 - track_h_px / 2
+        if wheel_rad <= 0:
             raise ValueError(
-                f"Wheel radius is non-positive ({wheel_rad_px:.2f} px). "
-                "Increase cart_strut_height_nd or reduce track_h so that "
+                f"Wheel radius is non-positive ({wheel_rad:.2f} px). "
+                "Increase cart_strut_height or reduce track_h so that "
                 "strut_height/2 > track_height/2."
             )
 
@@ -89,7 +89,7 @@ class CartItem(QGraphicsRectItem):
 
         # Wheel rotation state (degrees, accumulates each frame)
         self._wheel_angle: float = 0.0
-        self._wheel_rad_m: float = wheel_rad_px / v.scale  # metres, for rotation calc
+        self._wheel_rad_m: float = wheel_rad / v.scale  # metres, for rotation calc
 
         # MuJoCo data handle
         self._mujoco_data = env._mujoco_env.unwrapped.data
@@ -106,7 +106,7 @@ class CartItem(QGraphicsRectItem):
         # ------------------------------------------------------------------
         for sign in (-1, 1):
             strut = QGraphicsRectItem(-strut_w / 2, -strut_h / 2, strut_w, strut_h, self)
-            strut.setPos(sign * (body_w / 2 + strut_w / 2), 0)
+            strut.setPos(sign * (body_w / 2), 0)
             strut.setBrush(QBrush(fg))
             strut.setPen(QPen(Qt.PenStyle.NoPen))
             strut.setFlag(QGraphicsItem.GraphicsItemFlag.ItemStacksBehindParent, True)
@@ -119,7 +119,7 @@ class CartItem(QGraphicsRectItem):
         wheel_path = os.path.normpath(wheel_path)
         if not os.path.isfile(wheel_path):
             raise FileNotFoundError(f"Wheel image not found: {wheel_path!r}")
-        wheel_size = max(1, round(2 * wheel_rad_px))
+        wheel_size = max(1, round(2 * wheel_rad))
         raw_pixmap = QPixmap(wheel_path)
         wheel_pixmap = raw_pixmap.scaled(
             wheel_size,
@@ -130,14 +130,14 @@ class CartItem(QGraphicsRectItem):
 
         self._wheels: list[QGraphicsPixmapItem] = []
         for sx in (-1, 1):                       # left / right
-            strut_cx = sx * (body_w / 2 + strut_w / 2)
+            strut_cx = sx * (body_w / 2)
             for sy in (-1, 1):                   # top / bottom
                 wheel_cy = sy * strut_h / 2
                 w = QGraphicsPixmapItem(wheel_pixmap, self)
                 # Position so that the pixmap centre is at (strut_cx, wheel_cy)
-                w.setPos(strut_cx - wheel_rad_px, wheel_cy - wheel_rad_px)
+                w.setPos(strut_cx - wheel_rad, wheel_cy - wheel_rad)
                 # Rotate around the pixmap centre
-                w.setTransformOriginPoint(wheel_rad_px, wheel_rad_px)
+                w.setTransformOriginPoint(wheel_rad, wheel_rad)
                 w.setFlag(QGraphicsItem.GraphicsItemFlag.ItemStacksBehindParent, True)
                 w.setAcceptedMouseButtons(Qt.MouseButton.NoButton)
                 self._wheels.append(w)
