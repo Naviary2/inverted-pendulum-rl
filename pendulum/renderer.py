@@ -7,7 +7,7 @@ from __future__ import annotations
 import numpy as np
 
 from PySide6.QtCore import Qt, QLineF, QRectF
-from PySide6.QtGui import QBrush, QColor, QPainter, QPainterPath, QPen
+from PySide6.QtGui import QBrush, QColor, QFont, QPainter, QPainterPath, QPen
 from PySide6.QtWidgets import (
     QGraphicsEllipseItem,
     QGraphicsItem,
@@ -136,20 +136,28 @@ class TickRulerItem(QGraphicsItem):
     def boundingRect(self) -> QRectF:
         v = self._v
         half_w = v.tick_range * v.scale
-        y_top = (v.track_h / 2 + v.tick_gap) * v.scale
-        y_bot = y_top + v.tick_int_height * v.scale
+        y_mid = (v.track_h / 2 + v.tick_gap) * v.scale
+        max_half_h = v.tick_zero_height / 2 * v.scale
+        y_top = y_mid - max_half_h
+        # Reserve space for the number labels below the ticks
+        label_area = (v.tick_label_gap + v.tick_label_height) * v.scale
+        y_bot = y_mid + max_half_h + label_area
         return QRectF(-half_w, y_top, 2 * half_w, y_bot - y_top)
 
     def paint(self, painter: QPainter, option, widget=None) -> None:  # noqa: ARG002
         v = self._v
-        y_top = (v.track_h / 2 + v.tick_gap) * v.scale
+        y_mid = (v.track_h / 2 + v.tick_gap) * v.scale
         r, g, b = v.fg_color
 
         steps = round(v.tick_range * 10)
         for i in range(-steps, steps + 1):
             x_px = (i / 10) * v.scale
 
-            if i % 10 == 0:        # integer tick
+            if i == 0:             # zero tick – most prominent
+                h_px = v.tick_zero_height * v.scale
+                alpha = v.tick_zero_alpha
+                width = v.tick_zero_width * v.scale
+            elif i % 10 == 0:      # integer tick
                 h_px = v.tick_int_height * v.scale
                 alpha = v.tick_int_alpha
                 width = v.tick_int_width * v.scale
@@ -165,7 +173,24 @@ class TickRulerItem(QGraphicsItem):
             pen = QPen(QColor(r, g, b, alpha), width)
             pen.setCapStyle(Qt.PenCapStyle.FlatCap)
             painter.setPen(pen)
-            painter.drawLine(QLineF(x_px, y_top, x_px, y_top + h_px))
+            painter.drawLine(QLineF(x_px, y_mid - h_px / 2, x_px, y_mid + h_px / 2))
+
+        # Draw number labels below each integer tick
+        font = QFont()
+        font.setPointSizeF(v.tick_label_font_size)
+        painter.setFont(font)
+        label_y = y_mid + v.tick_zero_height / 2 * v.scale + v.tick_label_gap * v.scale
+        label_w_px = 60.0  # wide enough for "-3"
+        label_h_px = v.tick_label_height * v.scale
+        for i in range(-v.tick_range, v.tick_range + 1):
+            x_px = i * v.scale
+            alpha = v.tick_zero_alpha if i == 0 else v.tick_int_alpha
+            painter.setPen(QPen(QColor(r, g, b, alpha)))
+            painter.drawText(
+                QRectF(x_px - label_w_px / 2, label_y, label_w_px, label_h_px),
+                Qt.AlignmentFlag.AlignHCenter | Qt.AlignmentFlag.AlignTop,
+                str(i),
+            )
 
 
 class PendulumScene(QGraphicsScene):
