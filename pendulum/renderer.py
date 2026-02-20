@@ -48,7 +48,7 @@ class PendulumScene(QGraphicsScene):
         track_len = p_cfg.track_length * v.scale + body_w_px
         track_h = v.track_h * v.scale
         self._track = QGraphicsRectItem(-track_len / 2, -track_h / 2, track_len, track_h)
-        pen_track = QPen(fg, v.track_thick)
+        pen_track = QPen(fg, v.track_thick * v.scale)
         self._track.setPen(pen_track)
         self._track.setBrush(Qt.BrushStyle.NoBrush)
         self.addItem(self._track)
