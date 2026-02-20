@@ -152,13 +152,13 @@ class CartItem(QGraphicsRectItem):
         )
         
         # Create a darkened version of the wheel pixmap for the locked state
-        # dark_pixmap = wheel_pixmap.copy()
-        # painter = QPainter(dark_pixmap)
-        # painter.setCompositionMode(QPainter.CompositionMode.CompositionMode_SourceAtop)
-        # painter.fillRect(dark_pixmap.rect(), _rgb(v.cart_locked_wheel_tint))
-        # painter.end()
-        # self._normal_wheel_pixmap = wheel_pixmap
-        # self._locked_wheel_pixmap = dark_pixmap
+        dark_pixmap = wheel_pixmap.copy()
+        painter = QPainter(dark_pixmap)
+        painter.setCompositionMode(QPainter.CompositionMode.CompositionMode_SourceAtop)
+        painter.fillRect(dark_pixmap.rect(), _rgb(v.cart_locked_wheel_tint))
+        painter.end()
+        self._normal_wheel_pixmap = wheel_pixmap
+        self._locked_wheel_pixmap = dark_pixmap
 
         # Each entry is (pixmap_item, wheel_radius_in_metres, spin_direction).
         # spin_direction is +1 for top wheels (contact at wheel bottom → clockwise)
