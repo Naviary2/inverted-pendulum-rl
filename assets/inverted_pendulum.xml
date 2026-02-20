@@ -16,6 +16,12 @@
 		<!-- We will move it to follow the mouse cursor. -->
 		<body name="target_mocap" mocap="true" pos="0 0 0" />
 
+		<!-- Force circle: a mocap body that follows the mouse and collides with other bodies -->
+		<!-- The radius (0.12m) corresponds to 30px at scale=250 pixels/meter -->
+		<body name="force_circle_mocap" mocap="true" pos="0 0 100">
+			<geom name="force_circle" type="sphere" size="0.12" rgba="1 0 0 0"/>
+		</body>
+
 		<body name="cart" pos="0 0 0">
 			<!-- CHANGE RANGE WITH THE CONFIG.PY!!!!!! -->
 			<joint axis="1 0 0" limited="true" name="slider" pos="0 0 0" range="-2.4 2.4" type="slide"/>
@@ -23,7 +29,12 @@
 			<body name="pole" pos="0 0 0">
 				<joint axis="0 1 0" name="hinge" pos="0 0 0" type="hinge" limited="false"/>
 				<!-- CHANGE LENGTH AND MASS WITH THE CONFIG.PY!!!!!! -->
+				<!-- Pole rod has no collision (contype=0), only the tip node collides -->
 				<geom fromto="0 0 0 0.001 0 1.0" name="pole" size="0.049" mass="0.2" type="capsule"/>
+				<!-- Tip node: sphere at end of pole for collision with force circle -->
+				<!-- Radius 0.096m = 24px (node_radius) at scale 250 px/m -->
+				<!-- Position Z must match pole length (1.0m) - CHANGE WITH CONFIG.PY!!!!!! -->
+				<geom name="tip_node" type="sphere" pos="0 0 1.0" size="0.096" mass="0.01" contype="1"/>
 			</body>
 		</body>
 	</worldbody>

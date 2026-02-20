@@ -16,6 +16,7 @@ class PendulumConfig:
     track_length: float = 2.4 * 2    # m (total track, cart can move ±half) - MUST MATCH XML!!!!!!
 
     fps: int = 60                    # Hz (Controls both render speed and physics timestep)
+    # fps: int = 240                    # Hz (Controls both render speed and physics timestep)
     physics_substeps: int = 1        # How many physics step per 1 render step. Higher = more accurate physics but slower training.
 
     # Links (lists allow N-link pendulums)
@@ -74,3 +75,8 @@ class VisualizationConfig:
     bg_color: tuple = (35, 35, 35) # grey
     fg_color: tuple = (255, 255, 255) # white
     cart_fill_alpha: int = 128        # 0-255 transparency for cart fill
+
+    # Force circle (toggled with "F" key)
+    force_circle_radius: int = 30         # px
+    force_circle_thickness: int = 4       # px
+    force_circle_color: tuple = (255, 0, 0)  # red

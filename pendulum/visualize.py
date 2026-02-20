@@ -27,7 +27,7 @@ import pygame.gfxdraw
 
 from .config import PendulumConfig, TrainingConfig, VisualizationConfig
 from .environment import CartPendulumEnv
-from .interaction import CartDragController
+from .interaction import CartDragController, ForceCircleController
 
 
 def _load_model(path: str):
@@ -93,6 +93,9 @@ async def _async_run(
 
     # Initialize the drag controller
     drag_controller = CartDragController(env, p_cfg, v)
+    
+    # Initialize the force circle controller
+    force_circle_controller = ForceCircleController(env, v)
 
     while running:
         # --- Framerate Limiter ---
@@ -121,6 +124,9 @@ async def _async_run(
                 
         # --- Manual Interaction ---
         drag_action = drag_controller.update(events, mouse_pos, cx, cy)
+        
+        # --- Force Circle Interaction ---
+        force_circle_controller.update(events, mouse_pos, cx, cy)
 
         # --- action ---
         if drag_action is not None:
@@ -239,6 +245,9 @@ async def _async_run(
 
             # Next pivot is this tip
             pivot_x, pivot_y = end_x, end_y
+
+        # --- Draw Force Circle ---
+        force_circle_controller.draw(screen, mouse_pos)
 
         # Run flip in an executor to avoid blocking the event loop during VSync wait
         await loop.run_in_executor(None, pygame.display.flip)
