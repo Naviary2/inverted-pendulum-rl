@@ -148,33 +148,26 @@ class PendulumScene(QGraphicsScene):
         self._track.setPen(pen_track)
         self._track.setBrush(Qt.BrushStyle.NoBrush)
 
-        # --- Pendulum links (lines) and tip nodes (children of widget) ---
+        # --- Pendulum links (bars) and joints (children of widget) ---
         n = p_cfg.num_links
-        node_rad = p_cfg.node_radius * v.scale
-        node_inner = node_rad - v.node_outline_width * v.scale
         pend_w = v.pendulum_width * v.scale
+        joint_rad = v.joint_radius * v.scale
 
         self._links: list[QGraphicsLineItem] = []
-        self._nodes_outer: list[QGraphicsEllipseItem] = []
-        self._nodes_inner: list[QGraphicsEllipseItem] = []
+        self._joints: list[QGraphicsEllipseItem] = []
 
         for _ in range(n):
+            # Dark metal bar: rounded-cap thick line = visually a rounded rectangle
             line = QGraphicsLineItem(self._widget)
-            pen = QPen(fg, pend_w, Qt.PenStyle.SolidLine, Qt.PenCapStyle.RoundCap)
+            pen = QPen(_rgb(v.pendulum_bar_color), pend_w, Qt.PenStyle.SolidLine, Qt.PenCapStyle.RoundCap)
             line.setPen(pen)
             self._links.append(line)
 
-            # outer node
-            outer = QGraphicsEllipseItem(-node_rad, -node_rad, 2 * node_rad, 2 * node_rad, self._widget)
-            outer.setBrush(QBrush(fg))
-            outer.setPen(QPen(Qt.PenStyle.NoPen))
-            self._nodes_outer.append(outer)
-
-            # inner node
-            inner = QGraphicsEllipseItem(-node_inner, -node_inner, 2 * node_inner, 2 * node_inner, self._widget)
-            inner.setBrush(QBrush(_rgb(v.widget_theme_color)))
-            inner.setPen(QPen(Qt.PenStyle.NoPen))
-            self._nodes_inner.append(inner)
+            # Joint circle at the far end of this link (drawn on top of the bar)
+            joint = QGraphicsEllipseItem(-joint_rad, -joint_rad, 2 * joint_rad, 2 * joint_rad, self._widget)
+            joint.setBrush(QBrush(_rgb(v.joint_color)))
+            joint.setPen(QPen(Qt.PenStyle.NoPen))
+            self._joints.append(joint)
 
 
         # --- Cart (child of widget) ---
@@ -212,8 +205,7 @@ class PendulumScene(QGraphicsScene):
             end_y = pivot_y - length_px * np.cos(theta_i)
 
             self._links[i].setLine(QLineF(pivot_x, pivot_y, end_x, end_y))
-            self._nodes_outer[i].setPos(end_x, end_y)
-            self._nodes_inner[i].setPos(end_x, end_y)
+            self._joints[i].setPos(end_x, end_y)
 
             pivot_x, pivot_y = end_x, end_y
 

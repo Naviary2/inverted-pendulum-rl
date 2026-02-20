@@ -52,8 +52,6 @@ class CartItem(QGraphicsRectItem):
         # ------------------------------------------------------------------
         # Derived pixel sizes
         # ------------------------------------------------------------------
-        node_rad_px = p_cfg.node_radius * v.scale
-        node_outline_px = v.node_outline_width * v.scale
         track_h_px = v.track_h * v.scale
 
         # Cart body: 3 node-diameters wide, track-height tall
@@ -114,7 +112,6 @@ class CartItem(QGraphicsRectItem):
         self._mujoco_data = env._mujoco_env.unwrapped.data
 
         fg = _rgb(v.fg_color)            # white
-        node_color = _rgb(v.widget_theme_color)
 
         # Cart body: white fill, no border
         self.setBrush(QBrush(fg))
@@ -187,21 +184,15 @@ class CartItem(QGraphicsRectItem):
             self._wheel_angles.append(0.0)
 
         # ------------------------------------------------------------------
-        # Pivot node (drawn on top of body)
-        # Looks identical to the pendulum tip node: white outline + coloured fill
+        # Pivot joint (drawn on top of body)
+        # A single small dark circle matching the pendulum link-end joints.
         # ------------------------------------------------------------------
-        self._node_outer = QGraphicsEllipseItem(
-            -node_rad_px, -node_rad_px, 2 * node_rad_px, 2 * node_rad_px, self
+        joint_rad = v.joint_radius * v.scale
+        self._pivot_joint = QGraphicsEllipseItem(
+            -joint_rad, -joint_rad, 2 * joint_rad, 2 * joint_rad, self
         )
-        self._node_outer.setBrush(QBrush(fg))
-        self._node_outer.setPen(QPen(Qt.PenStyle.NoPen))
-
-        node_inner_rad = node_rad_px - node_outline_px
-        self._node_inner = QGraphicsEllipseItem(
-            -node_inner_rad, -node_inner_rad, 2 * node_inner_rad, 2 * node_inner_rad, self
-        )
-        self._node_inner.setBrush(QBrush(node_color))
-        self._node_inner.setPen(QPen(Qt.PenStyle.NoPen))
+        self._pivot_joint.setBrush(QBrush(_rgb(v.joint_color)))
+        self._pivot_joint.setPen(QPen(Qt.PenStyle.NoPen))
 
         self.setAcceptHoverEvents(True)
         self.setCursor(Qt.CursorShape.OpenHandCursor)

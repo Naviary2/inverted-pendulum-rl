@@ -79,7 +79,10 @@ class VisualizationConfig:
 
     node_outline_width: float = 0.022 # m
 
-    pendulum_width: float = 0.045 # m
+    pendulum_width: float = 0.20 # m  (bar width — a little thinner than the 0.26 m node diameter)
+    pendulum_bar_color: tuple = (52, 62, 72)  # dark metal colour for the bar
+    joint_radius: float = 0.08 # m  (joint circles at each end of the bar)
+    joint_color: tuple = (35, 42, 50)  # slightly darker than the bar
     bg_color: tuple = (60, 60, 60) # grey
     fg_color: tuple = (255, 255, 255) # white
 
