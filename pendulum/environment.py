@@ -11,6 +11,7 @@ to maintain compatibility with the existing training and visualization code.
 from __future__ import annotations
 
 import gymnasium as gym
+import mujoco
 import numpy as np
 import os
 import tempfile
@@ -63,6 +64,17 @@ class CartPendulumEnv(gym.Env):
         # Overwrite the XML's timestep to match our desired FPS exactly.
         # This ensures real-time simulation: 60 FPS -> 0.0166s timestep.
         self._mujoco_env.unwrapped.model.opt.timestep = phys_timestep
+
+        # Cache the cart body's own mass (excluding the pendulum subtree) so that
+        # when nodes_affect_cart=False we can recompute cart kinematics using only
+        # the actuator force — equivalent to the cart having infinite inertia for
+        # pendulum reaction forces while still responding normally to the actuator.
+        _cart_body_id = mujoco.mj_name2id(
+            self._mujoco_env.unwrapped.model,
+            mujoco.mjtObj.mjOBJ_BODY,
+            "cart",
+        )
+        self._cart_mass = float(self._mujoco_env.unwrapped.model.body_mass[_cart_body_id])
 
         # --- Define observation and action spaces to match the original setup ---
 
@@ -161,8 +173,45 @@ class CartPendulumEnv(gym.Env):
         # 1. Scale the agent's action from [-1, 1] to the MuJoCo env's expected range [-3, 3]
         scaled_action = np.clip(action, -1.0, 1.0) * self.cfg.force_magnitude
 
+        # Save cart state before the physics step when pendulum reaction forces
+        # on the cart should be suppressed (nodes_affect_cart=False).
+        if not self.cfg.nodes_affect_cart:
+            _data = self._mujoco_env.unwrapped.data
+            _q_cart_before = float(_data.qpos[0])
+            _v_cart_before = float(_data.qvel[0])
+
         # 2. Step the underlying MuJoCo environment
         mujoco_obs, _reward, terminated, truncated, info = self._mujoco_env.step(scaled_action)
+
+        # When nodes_affect_cart=False, override the cart's position and velocity
+        # with a simple Newtonian integration driven only by the actuator force:
+        #   a = F / m_cart  (cart body mass only, not the full coupled system mass)
+        # This prevents the pendulum's reaction forces from moving the cart while
+        # preserving the cart's effect on the pendulum through the hinge joint.
+        if not self.cfg.nodes_affect_cart:
+            _model = self._mujoco_env.unwrapped.model
+            _dt = _model.opt.timestep * self.cfg.physics_substeps
+            _dt_sq = _dt * _dt
+            _F = float(scaled_action[0])
+            _a = _F / self._cart_mass
+            _v_new = _v_cart_before + _a * _dt
+            _q_new = _q_cart_before + _v_cart_before * _dt + 0.5 * _a * _dt_sq
+
+            # Enforce track limits
+            _half = self.cfg.track_length / 2.0
+            if _q_new >= _half:
+                _q_new = _half
+                _v_new = min(_v_new, 0.0)
+            elif _q_new <= -_half:
+                _q_new = -_half
+                _v_new = max(_v_new, 0.0)
+
+            _data.qpos[0] = _q_new
+            _data.qvel[0] = _v_new
+            # Recompute all derived quantities (body positions, Jacobians, …)
+            # so the renderer and observation are consistent with the corrected state.
+            mujoco.mj_forward(_model, _data)
+            mujoco_obs = self._mujoco_env.unwrapped._get_obs()
 
         # --- Custom Reward Shaping ---
         # Linear reward based on the angle of the pendulum. 0 when hanging down, 1 when perfectly upright.

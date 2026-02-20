@@ -14,6 +14,8 @@ class PendulumConfig:
     # Cart
     force_magnitude: float = 200          # Maximum force the cart can apply on any one frame, in Newtons.
     track_length: float = 2.4 * 2    # m (total track, cart can move ±half)
+    nodes_affect_cart: bool = False  # If False, pendulum reaction forces don't move the cart;
+    # only the actuator force does (as if the cart has infinite inertia for pendulum forces)
 
     # fps: int = 60                    # Hz (Controls both render speed and physics timestep)
     fps: int = 240                    # Hz (Controls both render speed and physics timestep)
