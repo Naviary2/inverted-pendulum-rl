@@ -34,11 +34,12 @@ python -m pendulum.train
 
 Optional arguments:
 
-| Flag          | Default               | Description                     |
-| ------------- | --------------------- | ------------------------------- |
-| `--timesteps` | `500000`              | Total training timesteps        |
-| `--n-envs`    | all CPU cores         | Number of parallel environments |
-| `--save-path` | `models/ppo_pendulum` | Where to save the trained model |
+| Flag           | Default               | Description                                           |
+| -------------- | --------------------- | ----------------------------------------------------- |
+| `--timesteps`  | `500000`              | Total training timesteps                              |
+| `--n-envs`     | all CPU cores         | Number of parallel environments                       |
+| `--save-path`  | `models/ppo_pendulum` | Where to save the trained model                       |
+| `--load-model` | None                  | Path to a pre-trained model to continue training from |
 
 ### Visualize (no model)
 
