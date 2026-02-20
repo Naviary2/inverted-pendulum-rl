@@ -24,10 +24,10 @@ import time
 import numpy as np
 import pygame
 import pygame.gfxdraw
-import mujoco
 
 from .config import PendulumConfig, TrainingConfig, VisualizationConfig
 from .environment import CartPendulumEnv
+from .interaction import CartDragController
 
 
 def _load_model(path: str):
@@ -91,13 +91,8 @@ async def _async_run(
     limit_frame_duration = 1.0 / p_cfg.fps
     next_frame_target = 0.0
 
-    # --- Manual Interaction State ---
-    is_dragging = False
-    cursor_set_to_hand = False
-    
-    # Access internal MuJoCo handles for direct manipulation
-    mujoco_model = env._mujoco_env.unwrapped.model
-    mujoco_data = env._mujoco_env.unwrapped.data
+    # Initialize the drag controller
+    drag_controller = CartDragController(env, p_cfg, v)
 
     while running:
         # --- Framerate Limiter ---
@@ -109,74 +104,28 @@ async def _async_run(
                 await asyncio.sleep(delay)
             next_frame_target = time.time() + limit_frame_duration
 
-        # Calculate screen geometry for hit testing
+        # Calculate screen geometry for rendering & input
         cx = v.width // 2
         cy = v.height // 2
-        
-        # Get current cart pixel position for hit testing
-        state = env._state
-        current_cart_x_px = cx + int(state[0] * v.scale)
-        cart_hitbox = pygame.Rect(
-            current_cart_x_px - v.cart_width // 2,
-            cy - v.cart_height // 2,
-            v.cart_width,
-            v.cart_height
-        )
-
         mouse_pos = pygame.mouse.get_pos()
-        is_hovering = cart_hitbox.collidepoint(mouse_pos)
+        
+        # Fetch all events once per frame
+        events = pygame.event.get()
 
-        # Handle Events
-        for event in pygame.event.get():
+        # Handle General Events
+        for event in events:
             if event.type == pygame.QUIT:
                 running = False
             elif event.type == pygame.KEYDOWN and event.key == pygame.K_r:
                 obs, _ = env.reset()
                 
-            # --- Mouse Interactions ---
-            elif event.type == pygame.MOUSEBUTTONDOWN:
-                if event.button == 1 and is_hovering:
-                    is_dragging = True
-                    # Activate the weld constraint to grab the cart
-                    mujoco_data.eq_active = 1
-            elif event.type == pygame.MOUSEBUTTONUP:
-                if event.button == 1:
-                    is_dragging = False
-                    # Deactivate the weld constraint to release the cart
-                    mujoco_data.eq_active = 0
-
-        # --- Cursor Logic ---
-        if is_dragging:
-            if cursor_set_to_hand:
-                pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_SIZEALL)
-                cursor_set_to_hand = False
-        elif is_hovering:
-            if not cursor_set_to_hand:
-                pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_HAND)
-                cursor_set_to_hand = True
-        else:
-            if cursor_set_to_hand:
-                pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_ARROW)
-                cursor_set_to_hand = False
+        # --- Manual Interaction ---
+        drag_action = drag_controller.update(events, mouse_pos, cx, cy)
 
         # --- action ---
-        
-        if is_dragging:
-            # 1. Convert Mouse X (pixels) -> World X (meters)
-            mouse_x = mouse_pos[0]
-            target_x = (mouse_x - cx) / v.scale
-            
-            # Clamp to track limits
-            half_track = p_cfg.track_length / 2.0
-            target_x = float(np.clip(target_x, -half_track, half_track))
-            
-            # 2. Update the position of the mocap body
-            # The weld constraint will pull the cart towards this position.
-            mujoco_data.mocap_pos[0, 0] = target_x
-            
-            # 3. Apply zero action while dragging
-            action = np.array([0.0], dtype=np.float32)
-
+        if drag_action is not None:
+            # Overridden by manual dragging
+            action = drag_action
         else:
             if model is not None:
                 # Normal AI control
@@ -191,7 +140,7 @@ async def _async_run(
         obs, _reward, terminated, truncated, _ = env.step(action)
 
         if terminated or truncated:
-            if not is_dragging:
+            if not drag_controller.is_dragging:
                 obs, _ = env.reset()
 
         # --- draw ---
