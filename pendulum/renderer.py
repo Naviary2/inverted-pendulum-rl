@@ -75,6 +75,13 @@ class SimulationWidget(QGraphicsObject):
         shadow.setColor(QColor(0, 0, 0, 180))
         self.setGraphicsEffect(shadow)
 
+        # Cache the fully-composited widget + shadow into a pixmap once.
+        # Any time another item (e.g. the force circle) moves over this widget,
+        # Qt only needs to blit pixels from this cache rather than re-running
+        # paint() or the shadow blur.  The cache stays valid forever because
+        # SimulationWidget never moves or changes after initialization.
+        self.setCacheMode(self.CacheMode.DeviceCoordinateCache)
+
     def boundingRect(self) -> QRectF:
         # Expand by half the outline pen width so the stroke is never clipped.
         half_pen = self._v.widget_outline_width * self._v.scale / 2
