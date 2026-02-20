@@ -14,8 +14,9 @@ from .environment import CartPendulumEnv
 class ForceCircleController:
     """Manages the force circle mode that follows the mouse and collides with bodies."""
 
-    def __init__(self, env: CartPendulumEnv, v_cfg: VisualizationConfig):
+    def __init__(self, env: CartPendulumEnv, p_cfg: PendulumConfig, v_cfg: VisualizationConfig):
         self.env = env
+        self.p_cfg = p_cfg
         self.v = v_cfg
         
         # Force circle mode state (toggled with "F" key)
@@ -63,7 +64,7 @@ class ForceCircleController:
             return
         
         mouse_x, mouse_y = mouse_pos
-        radius = int(self.v.force_circle_radius * self.v.scale)
+        radius = int(self.p_cfg.force_circle_radius * self.v.scale)
         thickness = self.v.force_circle_thickness
         color = self.v.force_circle_color
         

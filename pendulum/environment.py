@@ -13,6 +13,7 @@ from __future__ import annotations
 import gymnasium as gym
 import numpy as np
 import os
+import tempfile
 from gymnasium import spaces
 
 from .config import PendulumConfig
@@ -39,11 +40,15 @@ class CartPendulumEnv(gym.Env):
 
         xml_path = os.path.join(os.path.dirname(__file__), "..", "assets", "inverted_pendulum.xml")
 
+        # Generate a modified XML with config values as the single source of truth
+        modified_xml_path = self._create_config_xml(os.path.abspath(xml_path))
+        self._tmp_xml_path = modified_xml_path
+
         # Create the underlying MuJoCo environment
         self._mujoco_env = gym.make(
             "InvertedPendulum-v5",
             render_mode=render_mode,
-            xml_file=os.path.abspath(xml_path),
+            xml_file=modified_xml_path,
             # This tells Gym: "Run X physics steps for every 1 call to .step()"
             frame_skip=self.cfg.physics_substeps,
             # This forces the inner env to respect our custom limit set in visualize.py (instead of its maximum 1000 steps)
@@ -58,10 +63,6 @@ class CartPendulumEnv(gym.Env):
         # Overwrite the XML's timestep to match our desired FPS exactly.
         # This ensures real-time simulation: 60 FPS -> 0.0166s timestep.
         self._mujoco_env.unwrapped.model.opt.timestep = phys_timestep
-
-        # Overwrite the XML's gravity with the value from PendulumConfig
-        # MuJoCo gravity is a 3D vector [x, y, z]. We set the Z-axis (index 2).
-        self._mujoco_env.unwrapped.model.opt.gravity[2] = -self.cfg.gravity
 
         # --- Define observation and action spaces to match the original setup ---
 
@@ -86,6 +87,30 @@ class CartPendulumEnv(gym.Env):
         # MuJoCo's observation is [x, θ, ẋ, θ̇], which we store directly here.
         self._state: np.ndarray | None = None
         self._step_count = 0
+
+    def _create_config_xml(self, base_xml_path: str) -> str:
+        """
+        Read the base MuJoCo XML template and substitute placeholders with
+        values from PendulumConfig so that config.py is the single source of truth.
+        Returns the path to a temporary XML file with the substituted values.
+        """
+        with open(base_xml_path, 'r') as f:
+            xml_template = f.read()
+
+        xml_content = xml_template.format(
+            gravity=self.cfg.gravity,
+            half_track=self.cfg.track_length / 2.0,
+            pole_length=self.cfg.link_lengths[0],
+            node_radius=self.cfg.node_radius,
+            force_circle_radius=self.cfg.force_circle_radius,
+        )
+
+        # Write to a temporary file
+        fd, tmp_path = tempfile.mkstemp(suffix='.xml')
+        os.close(fd)
+        with open(tmp_path, 'w') as f:
+            f.write(xml_content)
+        return tmp_path
 
     def _get_obs(self) -> np.ndarray:
         """
@@ -160,5 +185,7 @@ class CartPendulumEnv(gym.Env):
         return self._get_obs(), reward, terminated, truncated, info
     
     def close(self):
-        """Close the underlying MuJoCo environment."""
+        """Close the underlying MuJoCo environment and clean up temp files."""
         self._mujoco_env.close()
+        if hasattr(self, '_tmp_xml_path') and os.path.exists(self._tmp_xml_path):
+            os.unlink(self._tmp_xml_path)

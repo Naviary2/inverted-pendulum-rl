@@ -13,19 +13,23 @@ class PendulumConfig:
 
     # Cart
     force_magnitude: float = 200          # Maximum force the cart can apply on any one frame, in Newtons.
-    track_length: float = 2.4 * 2    # m (total track, cart can move ±half) - MUST MATCH XML!!!!!!
+    track_length: float = 2.4 * 2    # m (total track, cart can move ±half)
 
-    fps: int = 60                    # Hz (Controls both render speed and physics timestep)
-    # fps: int = 240                    # Hz (Controls both render speed and physics timestep)
+    # fps: int = 60                    # Hz (Controls both render speed and physics timestep)
+    fps: int = 240                    # Hz (Controls both render speed and physics timestep)
     physics_substeps: int = 1        # How many physics step per 1 render step. Higher = more accurate physics but slower training.
 
     # Links (lists allow N-link pendulums)
     num_links: int = 1
-    link_lengths: List[float] = field(default_factory=lambda: [1.0])   # m - MUST MATCH XML!!!!!!
+    link_lengths: List[float] = field(default_factory=lambda: [1.0])   # m
 
     # Physics
     gravity: float = 9.81            # m/s²
     force_limit: float = 10.0        # N  (max force applied to cart)
+
+    # Collision geometry
+    node_radius: float = 0.096      # m  (tip node sphere radius)
+    force_circle_radius: float = 0.16  # m  (force circle sphere radius)
 
     def __post_init__(self):
         assert len(self.link_lengths) == self.num_links
@@ -67,7 +71,6 @@ class VisualizationConfig:
     cart_rad: float = 0.024         # m
     cart_node_radius: float = 0.028 # m
 
-    node_radius: float = 0.096      # m
     node_fill_color: tuple = (50, 160, 30)
     node_outline_width: float = 0.016  # m
 
@@ -77,6 +80,5 @@ class VisualizationConfig:
     cart_fill_alpha: int = 128        # 0-255 transparency for cart fill
 
     # Force circle (toggled with "F" key)
-    force_circle_radius: float = 0.16   # m
     force_circle_thickness: int = 4     # px
     force_circle_color: tuple = (255, 0, 0)  # red
