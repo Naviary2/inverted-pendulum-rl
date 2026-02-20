@@ -59,7 +59,7 @@ async def _async_run(
     drag_controller = CartDragController(env, p_cfg, v)
     
     # Initialize the force circle controller
-    force_circle_controller = ForceCircleController(env, v)
+    force_circle_controller = ForceCircleController(env, p_cfg, v)
 
     # Initialize the scene renderer
     renderer = SceneRenderer(p_cfg, v)

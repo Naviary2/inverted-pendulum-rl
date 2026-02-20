@@ -77,7 +77,7 @@ class SceneRenderer:
         cart_h_px      = int(v.cart_height       * v.scale)
         cart_rad_px    = int(v.cart_rad          * v.scale)
         cart_node_px   = int(v.cart_node_radius  * v.scale)
-        node_rad_px    = int(v.node_radius       * v.scale)
+        node_rad_px    = int(p_cfg.node_radius    * v.scale)
         node_out_px    = int(v.node_outline_width * v.scale)
         pend_w_px      = int(v.pendulum_width    * v.scale)
         track_h_px     = int(v.track_h           * v.scale)
