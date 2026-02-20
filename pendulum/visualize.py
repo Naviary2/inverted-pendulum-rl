@@ -61,6 +61,7 @@ class PendulumWindow(QMainWindow):
         self.model = model
         self.p_cfg = p_cfg
         self.v = v
+        self._warming_up = True
 
         self.setWindowTitle("Inverted Pendulum")
         self.setFixedSize(v.width, v.height)
@@ -75,12 +76,18 @@ class PendulumWindow(QMainWindow):
         # Initial sync
         self._scene.sync_from_state(env._state)
 
+        # Startup delay: hold physics/interaction for 0.5 s after window opens
+        QTimer.singleShot(500, self._end_warmup)
+
         # Timer at config fps
         self._timer = QTimer(self)
         interval_ms = max(1, int(1000 / p_cfg.fps))
         self._timer.setInterval(interval_ms)
         self._timer.timeout.connect(self._tick)
         self._timer.start()
+
+    def _end_warmup(self):
+        self._warming_up = False
 
     # -- key handling -------------------------------------------------------
 
@@ -98,6 +105,9 @@ class PendulumWindow(QMainWindow):
     # -- simulation tick ----------------------------------------------------
 
     def _tick(self):
+        if self._warming_up:
+            return
+
         cart = self._scene._cart
 
         if cart.is_dragging:
