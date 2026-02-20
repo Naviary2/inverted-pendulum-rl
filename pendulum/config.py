@@ -13,7 +13,7 @@ class PendulumConfig:
 
     # Cart
     force_magnitude: float = 200          # Maximum force the cart can apply on any one frame, in Newtons.
-    track_length: float = 2.4 * 2    # m (total track, cart can move ±half)
+    track_length: float = 2.5 * 2    # m (total track, cart can move ±half)
 
     # fps: int = 60                    # Hz (Controls both render speed and physics timestep)
     fps: int = 240                    # Hz (Controls both render speed and physics timestep)
@@ -96,3 +96,22 @@ class VisualizationConfig:
     # widget_theme_color: tuple = (50, 160, 30)  # green
     widget_outline_width: float = 0.02  # m  outline stroke width
     widget_shadow_blur: float = 0.12     # m  drop-shadow blur radius
+
+    # Tick ruler (graduated markings below the track)
+    tick_range: int = 3               # whole-meter radius of the ruler (draws ±tick_range)
+    tick_gap: float = 0.35            # m  gap from track bottom edge to tick centre line
+    tick_zero_height: float = 0.18    # m  height of the x=0 tick
+    tick_int_height: float = 0.13     # m  height of integer ticks
+    tick_half_height: float = 0.09    # m  height of half-integer ticks
+    tick_tenth_height: float = 0.055  # m  height of tenth-step ticks
+    tick_zero_alpha: int = 255        # opacity of the x=0 tick
+    tick_int_alpha: int = 210         # opacity (0-255) of integer ticks
+    tick_half_alpha: int = 130        # opacity of half-integer ticks
+    tick_tenth_alpha: int = 65        # opacity of tenth-step ticks
+    tick_zero_width: float = 0.019    # m  stroke width of the x=0 tick
+    tick_int_width: float = 0.014     # m  stroke width of integer ticks
+    tick_half_width: float = 0.010    # m  stroke width of half-integer ticks
+    tick_tenth_width: float = 0.007   # m  stroke width of tenth-step ticks
+    tick_label_font_size: float = 20.0 # pt  font size for integer tick labels
+    tick_label_gap: float = 0.03     # m  gap from bottom of tallest tick to label top
+    tick_label_height: float = 0.1   # m  reserved height for label text
