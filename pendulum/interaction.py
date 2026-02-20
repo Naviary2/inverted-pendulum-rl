@@ -44,15 +44,17 @@ class CartItem(QGraphicsRectItem):
         self.p_cfg = p_cfg
         self.v = v
         self.is_dragging = False
+        self.is_locked = False
 
         # MuJoCo data handle
         self._mujoco_data = env._mujoco_env.unwrapped.data
 
         # Visual styling
-        fill_color = _rgb(v.node_fill_color)
+        self._normal_color = _rgb(v.node_fill_color)
+        self._locked_color = _rgb(v.cart_locked_color)
         outline_color = _rgb(v.fg_color)
 
-        self.setBrush(QBrush(fill_color))
+        self.setBrush(QBrush(self._normal_color))
         pen = QPen(outline_color, v.track_thick)
         pen.setJoinStyle(Qt.PenJoinStyle.RoundJoin)
         self.setPen(pen)
@@ -85,11 +87,24 @@ class CartItem(QGraphicsRectItem):
     def mouseReleaseEvent(self, event):
         if event.button() == Qt.MouseButton.LeftButton:
             self.is_dragging = False
-            self._mujoco_data.eq_active = 0
+            if not self.is_locked:
+                self._mujoco_data.eq_active = 0
             self.setCursor(Qt.CursorShape.OpenHandCursor)
             event.accept()
             return
         super().mouseReleaseEvent(event)
+
+    def toggle_lock(self):
+        """Toggle the cart lock. When locked, the cart is held at its current position."""
+        self.is_locked = not self.is_locked
+        if self.is_locked:
+            self._mujoco_data.mocap_pos[0, 0] = self._mujoco_data.qpos[0]
+            self._mujoco_data.eq_active = 1
+            self.setBrush(QBrush(self._locked_color))
+        else:
+            if not self.is_dragging:
+                self._mujoco_data.eq_active = 0
+            self.setBrush(QBrush(self._normal_color))
 
 
 class ForceCircleItem(QGraphicsEllipseItem):
