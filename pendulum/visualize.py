@@ -11,7 +11,7 @@ Renders:
 
 Usage:
     python -m pendulum.visualize                        # random actions
-    python -m pendulum.visualize --model models/ppo_pendulum/final.zip
+    python -m pendulum.visualize --model models/ppo_pendulum
 """
 
 from __future__ import annotations
@@ -19,6 +19,7 @@ from __future__ import annotations
 import argparse
 import signal
 import sys
+from pathlib import Path
 
 import numpy as np
 
@@ -26,7 +27,7 @@ from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QKeyEvent
 from PySide6.QtWidgets import QApplication, QMainWindow
 
-from .config import PendulumConfig, TrainingConfig, VisualizationConfig
+from .config import PendulumConfig, TrainingConfig, VisualizationConfig, FINAL_MODEL_FILENAME
 from .environment import CartPendulumEnv
 from .renderer import PendulumScene, PendulumView
 
@@ -36,11 +37,18 @@ from .renderer import PendulumScene, PendulumView
 # ---------------------------------------------------------------------------
 
 def _load_model(path: str):
-    """Load a trained PPO model (returns *None* when *path* is empty)."""
+    """Load a trained PPO model (returns *None* when *path* is empty).
+
+    If *path* is a directory, the final model is loaded from
+    ``<path>/<FINAL_MODEL_FILENAME>.zip`` automatically.
+    """
     if not path:
         return None
     from stable_baselines3 import PPO
-    return PPO.load(path)
+    p = Path(path)
+    if p.is_dir():
+        p = p / FINAL_MODEL_FILENAME
+    return PPO.load(p)
 
 
 # ---------------------------------------------------------------------------

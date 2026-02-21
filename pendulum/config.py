@@ -6,6 +6,9 @@ import multiprocessing
 from dataclasses import dataclass, field
 from typing import List
 
+# The filename (without extension) used for the fully-trained model inside its model directory.
+FINAL_MODEL_FILENAME = "final"
+
 
 @dataclass
 class PendulumConfig:

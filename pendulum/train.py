@@ -22,7 +22,7 @@ from stable_baselines3.common.callbacks import BaseCallback, EvalCallback
 from stable_baselines3.common.monitor import Monitor
 from stable_baselines3.common.vec_env import SubprocVecEnv
 
-from .config import PendulumConfig, TrainingConfig
+from .config import PendulumConfig, TrainingConfig, FINAL_MODEL_FILENAME
 from .environment import CartPendulumEnv
 
 # ==============================================================================
@@ -208,7 +208,7 @@ def train(
     model.learn(total_timesteps=t_cfg.total_timesteps, callback=callbacks)
     
     # Save the final model inside the model directory as final.zip
-    final_model_path = save_dir / "final"
+    final_model_path = save_dir / FINAL_MODEL_FILENAME
     model.save(final_model_path)
     print(f"Final model saved to {final_model_path}.zip")
 
@@ -224,7 +224,7 @@ def _parse_args():
     parser.add_argument("--n-envs", type=int, default=None,
                         help="Number of parallel envs (default: all cores)")
     parser.add_argument("--save-path", type=str, default="models/ppo_pendulum",
-                        help="Model directory; final.zip is written inside it (e.g. models/ppo_pendulum/final.zip)")
+                        help=f"Model directory; {FINAL_MODEL_FILENAME}.zip is written inside it (e.g. models/ppo_pendulum/{FINAL_MODEL_FILENAME}.zip)")
     parser.add_argument("--load-model", type=str, default="",
                         help="Path to an existing model to continue training")
     parser.add_argument("--tensorboard-log", type=str, default="logs/tensorboard",
