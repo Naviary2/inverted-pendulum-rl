@@ -11,7 +11,7 @@ Renders:
 
 Usage:
     python -m pendulum.visualize                        # random actions
-    python -m pendulum.visualize --model models/ppo_pendulum
+    python -m pendulum.visualize --model models/ppo_pendulum/final.zip
 """
 
 from __future__ import annotations

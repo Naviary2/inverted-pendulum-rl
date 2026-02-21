@@ -144,11 +144,14 @@ def train(
         )
     )
 
-    # Ensure save directory exists
-    # The main model will be saved as 'ppo_pendulum.zip', but checkpoints and live data
-    # will go into a subdirectory named 'ppo_pendulum' to keep things organized.
+    # Ensure save directories exist.
+    # All files for one model live under save_dir (e.g. models/ppo_pendulum/).
+    # Live dashboard data goes into save_dir/live/ and the final trained model
+    # is saved as save_dir/final.zip.
     save_dir = Path(t_cfg.model_save_path).parent / Path(t_cfg.model_save_path).stem
     save_dir.mkdir(parents=True, exist_ok=True)
+    live_dir = save_dir / "live"
+    live_dir.mkdir(parents=True, exist_ok=True)
 
     # --- Setup Callbacks ---
     # 1. EvalCallback saves the "best" model based on performance on a separate test env
@@ -162,7 +165,7 @@ def train(
     )
     
     # 2. Our custom LiveDashboardCallback for the UI
-    live_dashboard_callback = LiveDashboardCallback(save_dir=save_dir, save_freq=50) # Save a checkpoint every 50 episodes
+    live_dashboard_callback = LiveDashboardCallback(save_dir=live_dir, save_freq=50) # Save a checkpoint every 50 episodes
     
     # Combine callbacks into a list
     callbacks = [eval_callback, live_dashboard_callback]
@@ -204,9 +207,10 @@ def train(
     # Pass the list of callbacks to the learn method
     model.learn(total_timesteps=t_cfg.total_timesteps, callback=callbacks)
     
-    # Save the final model at the end of the full training run
-    model.save(t_cfg.model_save_path)
-    print(f"Final model saved to {t_cfg.model_save_path}")
+    # Save the final model inside the model directory as final.zip
+    final_model_path = save_dir / "final"
+    model.save(final_model_path)
+    print(f"Final model saved to {final_model_path}.zip")
 
     vec_env.close()
     eval_env.close()
@@ -219,7 +223,8 @@ def _parse_args():
     parser.add_argument("--timesteps", type=int, default=500_000)
     parser.add_argument("--n-envs", type=int, default=None,
                         help="Number of parallel envs (default: all cores)")
-    parser.add_argument("--save-path", type=str, default="models/ppo_pendulum.zip")
+    parser.add_argument("--save-path", type=str, default="models/ppo_pendulum",
+                        help="Model directory; final.zip is written inside it (e.g. models/ppo_pendulum/final.zip)")
     parser.add_argument("--load-model", type=str, default="",
                         help="Path to an existing model to continue training")
     parser.add_argument("--tensorboard-log", type=str, default="logs/tensorboard",
