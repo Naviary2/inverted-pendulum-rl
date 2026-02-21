@@ -114,5 +114,6 @@ class VisualizationConfig:
     tick_half_width: float = 0.010    # m  stroke width of half-integer ticks
     tick_tenth_width: float = 0.007   # m  stroke width of tenth-step ticks
     tick_label_font_size: float = 20.0 # pt  font size for integer tick labels
+    tick_label_font_family: str = "Consolas" # preferred font family for tick labels (monospace)
     tick_label_gap: float = 0.03     # m  gap from bottom of tallest tick to label top
     tick_label_height: float = 0.1   # m  reserved height for label text

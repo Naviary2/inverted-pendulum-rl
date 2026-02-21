@@ -176,7 +176,8 @@ class TickRulerItem(QGraphicsItem):
             painter.drawLine(QLineF(x_px, y_mid - h_px / 2, x_px, y_mid + h_px / 2))
 
         # Draw number labels below each integer tick
-        font = QFont()
+        font = QFont(v.tick_label_font_family)
+        font.setStyleHint(QFont.StyleHint.Monospace)
         font.setPointSizeF(v.tick_label_font_size)
         painter.setFont(font)
         label_y = y_mid + v.tick_zero_height / 2 * v.scale + v.tick_label_gap * v.scale
