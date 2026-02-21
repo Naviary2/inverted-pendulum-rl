@@ -157,7 +157,7 @@ def train(
     # 1. EvalCallback saves the "best" model based on performance on a separate test env
     eval_callback = EvalCallback(
         eval_env,
-        best_model_save_path=str(save_dir / "best_model"),
+        best_model_save_path=str(save_dir),
         log_path=str(save_dir / "logs"),
         eval_freq=max(t_cfg.n_steps // t_cfg.n_envs, 1) * 5,
         n_eval_episodes=10,
