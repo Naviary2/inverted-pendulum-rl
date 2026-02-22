@@ -160,9 +160,9 @@ def train(
     if not t_cfg.model_load_path and save_dir.is_dir():
         try:
             shutil.rmtree(save_dir)
-            print(f"Cleared existing directory: {save_dir}")
+            print(f"Cleared existing model directory: {save_dir}")
         except OSError as e:
-            print(f"Warning: could not clear existing directory {save_dir}: {e}")
+            print(f"Warning: could not clear existing model directory {save_dir}: {e}")
     save_dir.mkdir(parents=True, exist_ok=True)
     live_dir = save_dir / LIVE_DASHBOARD_DATA_FILENAME
     live_dir.mkdir(parents=True, exist_ok=True)
