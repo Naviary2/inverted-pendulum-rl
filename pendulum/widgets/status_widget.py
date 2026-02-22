@@ -14,10 +14,10 @@ class StatusWidget(BaseWidget):
 
     Layout (top → bottom):
     ┌──────────────────────────────┐  ← white themed border
-    │  5.2 s                      │  ← runtime, large left-aligned font
-    │  FPS             238        │  ← title right-aligned | value left-aligned
-    │  PHYSICS         240 Hz     │
-    │  AGENT           Enabled    │
+    │  5.2 s                       │  ← runtime, large left-aligned font
+    │  FPS             238         │  ← title right-aligned | value left-aligned
+    │  PHYSICS         240 Hz      │
+    │  AGENT           Enabled     │
     └──────────────────────────────┘
 
     All values are updated each frame via ``update_status()``.
