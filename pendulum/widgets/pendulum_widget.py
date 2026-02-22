@@ -43,7 +43,7 @@ class PendulumWidget(BaseWidget):
         half_h = base_half_h + padding_y_px
 
         rect = QRectF(-half_w, -half_h, 2 * half_w, 2 * half_h)
-        super().__init__(rect, self._THEME_COLOR, v.scale, parent)
+        super().__init__(rect, self._THEME_COLOR, parent)
 
 
 class TickRulerItem(QGraphicsItem):

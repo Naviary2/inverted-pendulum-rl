@@ -57,9 +57,7 @@ class StatusWidget(BaseWidget):
 
     def __init__(self, parent=None):
         rect = QRectF(0.0, 0.0, self._W, self._H)
-        # Pass scale=200.0 so _BORDER_SIZE (0.02 m) yields the same 4 px border
-        # as the PendulumWidget, keeping border width consistent across all widgets.
-        super().__init__(rect, self._THEME_COLOR, 200.0, parent)
+        super().__init__(rect, self._THEME_COLOR, parent)
         self._sim_time_secs: float = -0.5
         self._fps: float = 0.0
         self._physics_hz: int = 0

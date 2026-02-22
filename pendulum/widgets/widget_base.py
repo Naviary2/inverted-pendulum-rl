@@ -53,20 +53,19 @@ class BaseWidget(QGraphicsObject):
 
     The border radius and drop shadow spread are each proportional to the
     widget's shortest side (linear scaling).  The border/outline size is a
-    single constant shared by all widgets.  The only per-widget styling
-    parameter required at construction time is ``theme_color``.
+    fixed pixel constant shared by all widgets, independent of scale.
 
     Subclasses supply their own ``rect`` (computed from their own geometry)
-    and call ``super().__init__(rect, theme_color, scale, parent)``.
+    and call ``super().__init__(rect, theme_color, parent)``.
 
     Class attributes (override in subclasses to customise):
-        _BORDER_SIZE          - outline stroke width in metres (constant)
+        _BORDER_SIZE_PX       - outline stroke width in pixels (constant, scale-independent)
         _BG_COLOR             - background fill colour
         _BORDER_RADIUS_FACTOR - border_radius = factor * shortest_side (px)
         _SHADOW_SPREAD_FACTOR - shadow_spread  = factor * shortest_side (px)
     """
 
-    _BORDER_SIZE: float = 0.02           # m  outline stroke width (all widgets)
+    _BORDER_SIZE_PX: float = 4.0         # px  outline stroke width (all widgets, scale-independent)
     _BG_COLOR: tuple = (35, 35, 35)      # background fill colour
     _BORDER_RADIUS_FACTOR: float = 0.0435  # border_radius ∝ shortest side
     _SHADOW_SPREAD_FACTOR: float = 0.0435  # shadow_spread  ∝ shortest side
@@ -75,7 +74,6 @@ class BaseWidget(QGraphicsObject):
         self,
         rect: QRectF,
         theme_color: tuple,
-        scale: float,
         parent=None,
     ) -> None:
         super().__init__(parent)
@@ -85,7 +83,7 @@ class BaseWidget(QGraphicsObject):
         shortest_side = min(rect.width(), rect.height())
         self._radius_px: float = shortest_side * self._BORDER_RADIUS_FACTOR
         self._shadow_spread: float = shortest_side * self._SHADOW_SPREAD_FACTOR
-        self._border_size_px: float = self._BORDER_SIZE * scale
+        self._border_size_px: float = self._BORDER_SIZE_PX
 
     def boundingRect(self) -> QRectF:
         # Expand by half the outline pen so the stroke is never clipped,
