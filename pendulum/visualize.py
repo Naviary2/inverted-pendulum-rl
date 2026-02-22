@@ -122,6 +122,7 @@ class PendulumWindow(QMainWindow):
             QTimer.singleShot(int(WARMUP_DURATION_SECS * 1000), self._end_warmup)
         elif event.key() == Qt.Key.Key_G:
             self._scene._cart.toggle_lock()
+            self._scene.update_cart_lock()
         elif event.key() == Qt.Key.Key_F:
             self._scene._force_circle.toggle()
             # Sync force circle to current cursor position immediately

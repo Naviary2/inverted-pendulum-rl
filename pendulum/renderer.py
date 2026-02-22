@@ -19,7 +19,7 @@ from PySide6.QtWidgets import (
 from .config import PendulumConfig, VisualizationConfig
 from .environment import CartPendulumEnv
 from .interaction import CartItem, ForceCircleItem
-from .widgets import PendulumWidget, StatusWidget, TickRulerItem, _rgb
+from .widgets import CartLockWidget, PendulumWidget, StatusWidget, TickRulerItem, _rgb
 
 
 class PendulumScene(QGraphicsScene):
@@ -104,8 +104,15 @@ class PendulumScene(QGraphicsScene):
             -v.width / 2 + margin_px,
             -v.height / 2 + margin_px,
         )
-        self._status_widget.setZValue(100)
         self.addItem(self._status_widget)
+
+        # --- Cart lock widget (centred X, below pendulum widget) ---
+        lock_gap_px = 70.0
+        pw_bottom = self._widget.rect.bottom()    # y of pendulum widget's bottom edge in scene
+        lock_size = CartLockWidget._SIZE
+        self._cart_lock_widget = CartLockWidget(self._cart)
+        self._cart_lock_widget.setPos(-lock_size / 2, pw_bottom + lock_gap_px)
+        self.addItem(self._cart_lock_widget)
 
     # ---------------------------------------------------------------
 
@@ -118,6 +125,10 @@ class PendulumScene(QGraphicsScene):
     ) -> None:
         """Forward status values to the HUD widget."""
         self._status_widget.update_status(sim_time_secs, fps, physics_hz, agent_active)
+
+    def update_cart_lock(self) -> None:
+        """Refresh the cart lock widget (call after toggling lock state)."""
+        self._cart_lock_widget.refresh()
 
     def sync_from_state(self, state: np.ndarray):
         """Update item positions from MuJoCo state ``[x, θ, ẋ, θ̇]``."""

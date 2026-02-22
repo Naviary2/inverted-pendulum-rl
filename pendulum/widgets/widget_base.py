@@ -92,6 +92,11 @@ class BaseWidget(QGraphicsObject):
         margin = half_pen + self._shadow_spread
         return self._rect.adjusted(-margin, -margin, margin, margin)
 
+    @property
+    def rect(self) -> QRectF:
+        """The widget's inner geometry (excluding shadow and border margin)."""
+        return self._rect
+
     def paint(self, painter: QPainter, option, widget=None) -> None:  # noqa: ARG002
         # --- Shadow ---
         _draw_rounded_rect_shadow(
