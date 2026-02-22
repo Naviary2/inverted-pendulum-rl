@@ -174,6 +174,9 @@ class PendulumWindow(QMainWindow):
                 # No action
                 action = np.array([0.0]).astype(np.float32)
 
+            force_newton = float(action[0]) * self.p_cfg.force_magnitude
+            self._scene.update_agent_action(force_newton)
+
             self.obs, _reward, terminated, truncated, _ = self.env.step(action)
 
             if (terminated or truncated) and not cart.is_dragging and not cart.is_locked:
