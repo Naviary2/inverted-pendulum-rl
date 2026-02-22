@@ -29,7 +29,10 @@ class PendulumConfig:
 
     # Physics
     gravity: float = 9.81            # m/s² ~8 Looks normal
-    force_limit: float = 8.0        # N  (max force applied to cart)
+    # NOTE: force_limit is never read by Python or the MuJoCo XML — the actual
+    # maximum force applied to the cart is `force_magnitude` (scaled action * 200 N).
+    # The XML motor uses gear="1", so control = scaled_action directly in Newtons.
+    force_limit: float = 8.0        # N  (legacy/unused; see force_magnitude above)
 
     # Collision geometry
     node_radius: float = 0.13      # m  (tip node sphere radius)

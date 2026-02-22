@@ -1,6 +1,6 @@
 # pendulum/widgets/agent_action_widget.py
 
-"""AgentActionWidget: scrolling force-history graph showing the agent's actions."""
+"""ForceWidget: scrolling force-history graph (renamed class lives here)."""
 
 from __future__ import annotations
 
@@ -8,7 +8,7 @@ import math
 import time
 from collections import deque
 
-from PySide6.QtCore import Qt, QLineF, QRectF
+from PySide6.QtCore import Qt, QLineF, QRectF, QTimer
 from PySide6.QtGui import (
     QBrush,
     QColor,
@@ -19,16 +19,17 @@ from PySide6.QtGui import (
     QPainterPath,
     QPen,
 )
+from PySide6.QtWidgets import QGraphicsItem
 
 from .widget_base import BaseWidget
 
 
-class AgentActionWidget(BaseWidget):
-    """Scrolling line graph showing the agent's recent force actions.
+class ForceWidget(BaseWidget):
+    """Scrolling line graph showing the force applied to the cart each frame.
 
     Layout (top → bottom):
     ┌──────────────────────┐  ← teal themed border
-    │ AGENT ACTION (N)  +42│  ← title left-aligned, current force right-aligned
+    │ Force (Newtons)  +42 │  ← title left-aligned (white), current force right-aligned (white)
     │  -200      0    +200 │  ← fixed x-axis labels
     │      │               │  ← graph: now at top, 2 s ago at bottom
     │      │╲  ----0.0s    │      scrolling gridlines with sim-time labels
@@ -48,10 +49,10 @@ class AgentActionWidget(BaseWidget):
     _H: float = 440.0
 
     # Layout (pixels)
-    _TITLE_H: float = 44.0        # height of the title row
-    _AXIS_LABEL_H: float = 16.0   # fixed x-axis label strip just above the graph
-    _PAD_X: float = 20.0          # horizontal outer padding (doubled from original)
-    _PAD_BOT: float = 8.0         # gap between graph bottom and widget bottom edge
+    _TITLE_H: float = 50.0        # height of the title row (taller to fit larger fonts)
+    _AXIS_LABEL_H: float = 20.0   # fixed x-axis label strip just above the graph
+    _PAD_X: float = 20.0          # horizontal outer padding
+    _PAD_BOT: float = 20.0        # gap between graph bottom and widget bottom edge (matches PAD_X)
     _PAD_TITLE_TOP: float = 4.0   # top padding inside the title row
 
     # Graph time window
@@ -59,10 +60,10 @@ class AgentActionWidget(BaseWidget):
     _GRID_INTERVAL_SECS: float = 0.5   # one horizontal gridline per this many seconds
 
     # Typography
-    _TITLE_FONT_SIZE: float = 9.5
-    _FORCE_FONT_SIZE: float = 12.0
-    _AXIS_LABEL_FONT_SIZE: float = 8.5
-    _GRID_LABEL_FONT_SIZE: float = 8.0
+    _TITLE_FONT_SIZE: float = 12.0
+    _FORCE_FONT_SIZE: float = 14.0
+    _AXIS_LABEL_FONT_SIZE: float = 11.0
+    _GRID_LABEL_FONT_SIZE: float = 10.0
 
     # Appearance
     _LINE_ALPHA: int = 230          # opacity of the force line stroke
@@ -70,7 +71,7 @@ class AgentActionWidget(BaseWidget):
     _CENTER_LINE_ALPHA: int = 45    # opacity of the center (0-force) guide line
     _GRID_ALPHA: int = 40           # opacity of horizontal gridlines
     _GRID_LABEL_ALPHA: int = 120    # opacity of scrolling time labels
-    _GRID_LABEL_H: float = 13.0     # pixel height reserved for each scrolling time label
+    _GRID_LABEL_H: float = 15.0     # pixel height reserved for each scrolling time label
     _AXIS_LABEL_ALPHA: int = 180    # opacity of fixed x-axis labels
 
     # Minimum force guard (avoids division by zero when max_force is 0)
@@ -92,9 +93,26 @@ class AgentActionWidget(BaseWidget):
         self._max_force: float = max(max_force, self._MIN_FORCE)   # guard against division by zero
         self._force_history: deque[tuple[float, float]] = deque()
         self._current_force: float = 0.0
-        # Reference point used to extrapolate sim_time between ticks.
-        self._latest_perf_time: float | None = None
-        self._latest_sim_time: float = 0.0
+
+        # Smooth sim-clock: updated only when sim_time_secs jumps (e.g. each 0.1 s tick or
+        # on reset), NOT every physics frame.  This lets paint() extrapolate a smooth sim_now
+        # from wall-clock time instead of producing a staircase that jumps every 0.1 s.
+        self._last_sim_time: float = 0.0
+        self._last_perf_time: float | None = None   # None → force sync on first update_force call
+
+        # Minimum change in sim_time_secs that triggers a clock re-sync (~one rounded tick).
+        self._SIM_SYNC_THRESHOLD: float = 0.05
+
+        # Cache the rendered image so that force-circle movements (which overlap with this
+        # widget's scene area) don't trigger expensive full repaints.
+        self.setCacheMode(QGraphicsItem.CacheMode.DeviceCoordinateCache)
+
+        # Continuous animation timer: ensures smooth gridline scrolling at ~60 fps even
+        # when the tick rate is lower than the display refresh rate.
+        self._anim_timer = QTimer(self)
+        self._anim_timer.setInterval(16)   # ~60 fps
+        self._anim_timer.timeout.connect(self.update)
+        self._anim_timer.start()
 
     # ------------------------------------------------------------------
     # Public API
@@ -104,13 +122,19 @@ class AgentActionWidget(BaseWidget):
         """Append a new force reading (Newtons) and schedule a repaint.
 
         Readings older than ``_HISTORY_SECS`` are automatically pruned.
-        ``sim_time_secs`` is used to position the scrolling gridlines.
+        ``sim_time_secs`` drives the scrolling gridlines.
         """
         now = time.perf_counter()
         self._force_history.append((now, force_newton))
         self._current_force = force_newton
-        self._latest_perf_time = now
-        self._latest_sim_time = sim_time_secs
+
+        # Sync the smooth sim clock only when sim_time_secs has moved by more
+        # than a rounding step (0.1 s) away from our extrapolated value.  This
+        # means the epoch updates ~10 times/sec (on each sim-clock tick) rather
+        # than 240 times/sec, so paint() can smoothly extrapolate between ticks.
+        if self._last_perf_time is None or abs(sim_time_secs - self._last_sim_time) > self._SIM_SYNC_THRESHOLD:
+            self._last_sim_time = sim_time_secs
+            self._last_perf_time = now
 
         cutoff = now - self._HISTORY_SECS
         while self._force_history and self._force_history[0][0] < cutoff:
@@ -122,6 +146,7 @@ class AgentActionWidget(BaseWidget):
         """Clear the force history (call when the simulation resets)."""
         self._force_history.clear()
         self._current_force = 0.0
+        self._last_perf_time = None   # force epoch re-sync on next update_force call
         self.update()
 
     # ------------------------------------------------------------------
@@ -144,13 +169,13 @@ class AgentActionWidget(BaseWidget):
         graph_left = pad_x
         graph_right = self._W - pad_x
 
-        # Extrapolate current simulation time from the last tick reference point.
-        if self._latest_perf_time is not None:
-            sim_now = self._latest_sim_time + (now - self._latest_perf_time)
+        # Smooth sim clock: extrapolate continuously from the last epoch pair.
+        if self._last_perf_time is not None:
+            sim_now = self._last_sim_time + (now - self._last_perf_time)
         else:
             sim_now = 0.0
 
-        # ── 1. Title row ─────────────────────────────────────────────
+        # ── 1. Title row (white text) ─────────────────────────────────
         title_font = QFont()
         title_font.setPointSizeF(self._TITLE_FONT_SIZE)
         force_font = QFont()
@@ -159,18 +184,19 @@ class AgentActionWidget(BaseWidget):
 
         force_text = f"{self._current_force:+.0f}"
 
-        # Measure actual rendered widths to split the row without overlap.
+        # Measure rendered widths to split the row without overlap.
         force_text_w = QFontMetricsF(force_font).horizontalAdvance(force_text) + self._FORCE_TEXT_PADDING
         title_col_w = inner_w - force_text_w
 
-        painter.setPen(QPen(QColor(r, g, b)))
+        white = QColor(255, 255, 255)
+        painter.setPen(QPen(white))
 
-        # Left-aligned label
+        # Left-aligned title label
         painter.setFont(title_font)
         painter.drawText(
             QRectF(pad_x, self._PAD_TITLE_TOP, title_col_w, self._TITLE_H - self._PAD_TITLE_TOP),
             Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter,
-            "AGENT ACTION (N)",
+            "Force (Newtons)",
         )
 
         # Right-aligned current force value
@@ -300,3 +326,7 @@ class AgentActionWidget(BaseWidget):
         for px, py in points[1:]:
             line_path.lineTo(px, py)
         painter.drawPath(line_path)
+
+
+# Backward-compatible alias so any stale imports keep working.
+AgentActionWidget = ForceWidget

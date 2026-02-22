@@ -19,13 +19,13 @@ from PySide6.QtWidgets import (
 from .config import PendulumConfig, VisualizationConfig
 from .environment import CartPendulumEnv
 from .interaction import CartItem, ForceCircleItem
-from .widgets import AgentActionWidget, CartLockWidget, PendulumWidget, StatusWidget, TickRulerItem, _rgb
+from .widgets import ForceWidget, CartLockWidget, PendulumWidget, StatusWidget, TickRulerItem, _rgb
 
 
 class PendulumScene(QGraphicsScene):
     """QGraphicsScene that holds all simulation items."""
 
-    def __init__(self, env, p_cfg, v, parent=None, agent_loaded: bool = False):
+    def __init__(self, env, p_cfg, v, parent=None):
         super().__init__(parent)
         self.env = env
         self.p_cfg = p_cfg
@@ -42,15 +42,12 @@ class PendulumScene(QGraphicsScene):
         self._widget = PendulumWidget(p_cfg, v)
         self.addItem(self._widget)
 
-        # When an agent is loaded the AgentActionWidget sits to the left, so the
-        # pendulum widget shifts right to make visual room.  When no agent is
-        # loaded the widget stays centred at x = 0.
-        _pendulum_offset_x = 0.0
-        if agent_loaded:
-            _agent_w = AgentActionWidget._W
-            _agent_gap = 24.0                      # px gap between the two widgets
-            _pendulum_offset_x = (_agent_w + _agent_gap) / 2.0
-            self._widget.setPos(_pendulum_offset_x, 0)
+        # The ForceWidget always sits to the left, so the pendulum widget is
+        # shifted right to make visual room.
+        _agent_w = ForceWidget._W
+        _agent_gap = 24.0                      # px gap between the two widgets
+        _pendulum_offset_x = (_agent_w + _agent_gap) / 2.0
+        self._widget.setPos(_pendulum_offset_x, 0)
 
         # --- Track (child of widget) ---
         # Width: physics track length + one full cart body width for visual margin
@@ -121,16 +118,12 @@ class PendulumScene(QGraphicsScene):
         self._cart_lock_widget.setPos(-lock_size / 2, pw_bottom + lock_gap_px)
         self.addItem(self._cart_lock_widget)
 
-        # --- Agent Action widget (only when an agent is loaded) ---
-        self._agent_action_widget: AgentActionWidget | None = None
-        if agent_loaded:
-            agent_action_x = (
-                _pendulum_offset_x + self._widget.rect.left() - _agent_gap - _agent_w
-            )
-            agent_action_y = -AgentActionWidget._H / 2.0
-            self._agent_action_widget = AgentActionWidget(p_cfg.force_magnitude)
-            self._agent_action_widget.setPos(agent_action_x, agent_action_y)
-            self.addItem(self._agent_action_widget)
+        # --- Force widget (always visible, left of the pendulum widget, vertically centred) ---
+        force_widget_x = _pendulum_offset_x + self._widget.rect.left() - _agent_gap - _agent_w
+        force_widget_y = -ForceWidget._H / 2.0
+        self._force_widget = ForceWidget(p_cfg.force_magnitude)
+        self._force_widget.setPos(force_widget_x, force_widget_y)
+        self.addItem(self._force_widget)
 
         # --- Force circle (top-level scene item, renders above all widgets) ---
         self._force_circle = ForceCircleItem(env, p_cfg, v, scene_offset_x=_pendulum_offset_x)
@@ -152,15 +145,13 @@ class PendulumScene(QGraphicsScene):
         """Refresh the cart lock widget (call after toggling lock state)."""
         self._cart_lock_widget.refresh()
 
-    def update_agent_action(self, force_newton: float, sim_time_secs: float) -> None:
-        """Push a new force reading (Newtons) to the Agent Action widget (no-op when not loaded)."""
-        if self._agent_action_widget is not None:
-            self._agent_action_widget.update_force(force_newton, sim_time_secs)
+    def update_force_widget(self, force_newton: float, sim_time_secs: float) -> None:
+        """Push a new force reading (Newtons) to the Force widget."""
+        self._force_widget.update_force(force_newton, sim_time_secs)
 
-    def reset_agent_action(self) -> None:
-        """Clear the Agent Action widget history (call on simulation reset)."""
-        if self._agent_action_widget is not None:
-            self._agent_action_widget.reset()
+    def reset_force_widget(self) -> None:
+        """Clear the Force widget history (call on simulation reset)."""
+        self._force_widget.reset()
 
     def sync_from_state(self, state: np.ndarray):
         """Update item positions from MuJoCo state ``[x, θ, ẋ, θ̇]``."""

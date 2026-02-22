@@ -6,7 +6,7 @@ from .widget_base import BaseWidget, _rgb
 from .pendulum_widget import PendulumWidget, TickRulerItem
 from .status_widget import StatusWidget
 from .cart_lock_widget import CartLockWidget
-from .agent_action_widget import AgentActionWidget
+from .agent_action_widget import ForceWidget
 
 __all__ = [
     "BaseWidget",
@@ -14,5 +14,5 @@ __all__ = [
     "TickRulerItem",
     "StatusWidget",
     "CartLockWidget",
-    "AgentActionWidget",
+    "ForceWidget",
 ]
