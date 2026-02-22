@@ -19,6 +19,7 @@ from __future__ import annotations
 import argparse
 import signal
 import sys
+from pathlib import Path
 
 import numpy as np
 
@@ -29,6 +30,7 @@ from PySide6.QtWidgets import QApplication, QMainWindow
 from .config import PendulumConfig, TrainingConfig, VisualizationConfig
 from .environment import CartPendulumEnv
 from .renderer import PendulumScene, PendulumView
+from .train import FINAL_MODEL_FILENAME
 
 
 # ---------------------------------------------------------------------------
@@ -36,11 +38,23 @@ from .renderer import PendulumScene, PendulumView
 # ---------------------------------------------------------------------------
 
 def _load_model(path: str):
-    """Load a trained PPO model (returns *None* when *path* is empty)."""
+    """Load a trained PPO model (returns *None* when *path* is empty).
+
+    *path* must be the model directory; the final model is loaded from
+    ``<path>/<FINAL_MODEL_FILENAME>.zip`` automatically.
+    """
     if not path:
         return None
+    model_dir = Path(path)
+    if not model_dir.is_dir():
+        print(f"Error: model directory not found: {model_dir}")
+        sys.exit(1)
+    model_zip = model_dir / f"{FINAL_MODEL_FILENAME}.zip"
+    if not model_zip.is_file():
+        print(f"Error: trained model not found: {model_zip}")
+        sys.exit(1)
     from stable_baselines3 import PPO
-    return PPO.load(path)
+    return PPO.load(model_dir / FINAL_MODEL_FILENAME)
 
 
 # ---------------------------------------------------------------------------
