@@ -39,16 +39,13 @@ from .renderer import PendulumScene, PendulumView
 def _load_model(path: str):
     """Load a trained PPO model (returns *None* when *path* is empty).
 
-    If *path* is a directory, the final model is loaded from
+    *path* must be the model directory; the final model is loaded from
     ``<path>/<FINAL_MODEL_FILENAME>.zip`` automatically.
     """
     if not path:
         return None
     from stable_baselines3 import PPO
-    p = Path(path)
-    if p.is_dir():
-        p = p / FINAL_MODEL_FILENAME
-    return PPO.load(p)
+    return PPO.load(Path(path) / FINAL_MODEL_FILENAME)
 
 
 # ---------------------------------------------------------------------------
