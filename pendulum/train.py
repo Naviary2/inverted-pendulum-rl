@@ -22,8 +22,11 @@ from stable_baselines3.common.callbacks import BaseCallback, EvalCallback
 from stable_baselines3.common.monitor import Monitor
 from stable_baselines3.common.vec_env import SubprocVecEnv
 
-from .config import PendulumConfig, TrainingConfig, FINAL_MODEL_FILENAME
+from .config import PendulumConfig, TrainingConfig
 from .environment import CartPendulumEnv
+
+# The filename (without extension) used for the fully-trained model inside its model directory.
+FINAL_MODEL_FILENAME = "final"
 
 # ==============================================================================
 # Custom Callback for Live Visualization and Checkpointing
