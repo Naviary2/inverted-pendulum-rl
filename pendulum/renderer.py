@@ -120,10 +120,9 @@ class PendulumScene(QGraphicsScene):
         fps: float,
         physics_hz: int,
         agent_active: bool,
-        cart_locked: bool,
     ) -> None:
         """Forward status values to the HUD widget."""
-        self._status_widget.update_status(sim_time_secs, fps, physics_hz, agent_active, cart_locked)
+        self._status_widget.update_status(sim_time_secs, fps, physics_hz, agent_active)
 
     def sync_from_state(self, state: np.ndarray):
         """Update item positions from MuJoCo state ``[x, θ, ẋ, θ̇]``."""

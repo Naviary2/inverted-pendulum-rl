@@ -154,7 +154,6 @@ class PendulumWindow(QMainWindow):
             self._fps_smooth,
             physics_hz,
             self.model is not None,
-            self._scene.cart_locked,
         )
 
         if not self._warming_up:
