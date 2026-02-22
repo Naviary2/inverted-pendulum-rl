@@ -94,9 +94,6 @@ class PendulumScene(QGraphicsScene):
         # None on the first frame to avoid a large spurious rotation.
         self._prev_cart_x: float | None = None
 
-        # --- Force circle (child of widget) ---
-        self._force_circle = ForceCircleItem(env, p_cfg, v, parent=self._widget)
-
         # --- Status HUD widget (top-left corner, on top of everything) ---
         margin_px = 20.0
         self._status_widget = StatusWidget()
@@ -113,6 +110,10 @@ class PendulumScene(QGraphicsScene):
         self._cart_lock_widget = CartLockWidget(self._cart)
         self._cart_lock_widget.setPos(-lock_size / 2, pw_bottom + lock_gap_px)
         self.addItem(self._cart_lock_widget)
+
+        # --- Force circle (top-level scene item, renders above all widgets) ---
+        self._force_circle = ForceCircleItem(env, p_cfg, v)
+        self.addItem(self._force_circle)
 
     # ---------------------------------------------------------------
 
