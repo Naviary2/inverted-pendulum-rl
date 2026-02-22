@@ -101,13 +101,13 @@ class CartLockWidget(BaseWidget):
             inner_rect = self._rect.adjusted(half_pen, half_pen, -half_pen, -half_pen)
             painter.setPen(QPen(Qt.PenStyle.NoPen))
             painter.setBrush(QBrush(QColor(*self._BG_COLOR_LOCKED)))
-            painter.drawRoundedRect(inner_rect, self._radius_px, self._radius_px)
+            painter.drawRoundedRect(inner_rect, self._radius_px, self._radius_px * 0.5)
 
         # Hover highlight overlay
         if self._hovered:
             painter.setPen(QPen(Qt.PenStyle.NoPen))
             painter.setBrush(QBrush(self._COL_HOVER))
-            painter.drawRoundedRect(self._rect, self._radius_px, self._radius_px)
+            painter.drawRoundedRect(self._rect, self._radius_px, self._radius_px * 0.5)
 
         # ── 1. Header ────────────────────────────────────────────────
         header_font = QFont()
