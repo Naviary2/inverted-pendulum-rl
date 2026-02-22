@@ -91,7 +91,7 @@ class PendulumWindow(QMainWindow):
         self.obs, _ = env.reset()
 
         # Scene & view
-        self._scene = PendulumScene(env, p_cfg, v)
+        self._scene = PendulumScene(env, p_cfg, v, agent_loaded=model is not None)
         self._view = PendulumView(self._scene)
         self.setCentralWidget(self._view)
 
@@ -119,6 +119,7 @@ class PendulumWindow(QMainWindow):
             self.obs, _ = self.env.reset()
             self._warming_up = True
             self._warmup_start = time.perf_counter()
+            self._scene.reset_agent_action()
             QTimer.singleShot(int(WARMUP_DURATION_SECS * 1000), self._end_warmup)
         elif event.key() == Qt.Key.Key_G:
             self._scene._cart.toggle_lock()
@@ -159,6 +160,7 @@ class PendulumWindow(QMainWindow):
             self.model is not None,
         )
 
+        force_newton = 0.0  # zero during warmup; computed below when simulation is running
         if not self._warming_up:
             cart = self._scene._cart
 
@@ -175,12 +177,14 @@ class PendulumWindow(QMainWindow):
                 action = np.array([0.0]).astype(np.float32)
 
             force_newton = float(action[0]) * self.p_cfg.force_magnitude
-            self._scene.update_agent_action(force_newton)
 
             self.obs, _reward, terminated, truncated, _ = self.env.step(action)
 
             if (terminated or truncated) and not cart.is_dragging and not cart.is_locked:
                 self.obs, _ = self.env.reset()
+
+        # Update agent action widget every tick (force = 0 during warmup).
+        self._scene.update_agent_action(force_newton, sim_time_secs)
 
         self._scene.sync_from_state(self.env._state)
 
