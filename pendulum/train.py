@@ -228,16 +228,26 @@ def train(
               f"(run: tensorboard --logdir {t_cfg.tensorboard_log})")
         
     # Pass the list of callbacks to the learn method
-    model.learn(total_timesteps=t_cfg.total_timesteps, callback=callbacks)
-    
-    # Save the final model inside the model directory as final.zip
-    final_model_path = save_dir / FINAL_MODEL_FILENAME
-    model.save(final_model_path)
-    print(f"Final model saved to {final_model_path}.zip")
+    interrupted = False
+    try:
+        model.learn(total_timesteps=t_cfg.total_timesteps, callback=callbacks)
+    except KeyboardInterrupt:
+        interrupted = True
+        print("\nTraining interrupted. Saving model before exit ...")
+    finally:
+        # Save the final model inside the model directory as final.zip
+        final_model_path = save_dir / FINAL_MODEL_FILENAME
+        model.save(final_model_path)
+        if interrupted:
+            print(f"Interrupted model saved to {final_model_path}.zip")
+            print("You can resume training with: --load-model <model-name>")
+        else:
+            print(f"Final model saved to {final_model_path}.zip")
 
-    vec_env.close()
-    eval_env.close()
-    return model
+        vec_env.close()
+        eval_env.close()
+
+    return None if interrupted else model
 
 
 # ---- CLI entry point -------------------------------------------------------
