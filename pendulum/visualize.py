@@ -184,7 +184,7 @@ def run(
 def _parse_args():
     parser = argparse.ArgumentParser(description="Visualise pendulum")
     parser.add_argument("--model", type=str, default="",
-                        help="Model name inside models/ (omit for random actions)")
+                        help="Model name inside models/ (omit for no actions)")
     return parser.parse_args()
 
 
