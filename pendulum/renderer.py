@@ -36,6 +36,8 @@ class PendulumWidget(BaseWidget):
     # Padding around the track content, in metres (constant for this widget type)
     _PADDING_X: float = 1.0   # m  left / right padding
     _PADDING_Y: float = 0.25  # m  top / bottom padding
+    _THEME_COLOR: tuple = (70, 140, 255)  # blue accent color
+    # _THEME_COLOR: tuple = (50, 160, 30)  # green
 
     def __init__(self, p_cfg, v, parent=None):
         # Base content half-width: half the physics track + cart-body visual margin
@@ -53,7 +55,7 @@ class PendulumWidget(BaseWidget):
         half_h = base_half_h + padding_y_px
 
         rect = QRectF(-half_w, -half_h, 2 * half_w, 2 * half_h)
-        super().__init__(rect, v.widget_theme_color, v.scale, parent)
+        super().__init__(rect, self._THEME_COLOR, v.scale, parent)
 
 
 class TickRulerItem(QGraphicsItem):
@@ -194,13 +196,13 @@ class PendulumScene(QGraphicsScene):
 
             # inner node
             inner = QGraphicsEllipseItem(-node_inner, -node_inner, 2 * node_inner, 2 * node_inner, self._widget)
-            inner.setBrush(QBrush(_rgb(v.widget_theme_color)))
+            inner.setBrush(QBrush(_rgb(PendulumWidget._THEME_COLOR)))
             inner.setPen(QPen(Qt.PenStyle.NoPen))
             self._nodes_inner.append(inner)
 
 
         # --- Cart (child of widget) ---
-        self._cart = CartItem(env, p_cfg, v, parent=self._widget)
+        self._cart = CartItem(env, p_cfg, v, PendulumWidget._THEME_COLOR, parent=self._widget)
 
         # Track the previous cart x position so we can compute delta for wheel rotation.
         # None on the first frame to avoid a large spurious rotation.
