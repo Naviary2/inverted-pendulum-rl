@@ -27,6 +27,7 @@ from .environment import CartPendulumEnv
 
 # The filename (without extension) used for the fully-trained model inside its model directory.
 FINAL_MODEL_FILENAME = "final"
+LIVE_DASHBOARD_DATA_FILENAME = "live"
 
 # ==============================================================================
 # Custom Callback for Live Visualization and Checkpointing
@@ -153,7 +154,7 @@ def train(
     # is saved as save_dir/final.zip.
     save_dir = Path(t_cfg.model_save_path).parent / Path(t_cfg.model_save_path).stem
     save_dir.mkdir(parents=True, exist_ok=True)
-    live_dir = save_dir / "live"
+    live_dir = save_dir / LIVE_DASHBOARD_DATA_FILENAME
     live_dir.mkdir(parents=True, exist_ok=True)
 
     # --- Setup Callbacks ---
