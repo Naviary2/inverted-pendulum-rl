@@ -38,8 +38,8 @@ Optional arguments:
 | -------------- | --------------------- | ----------------------------------------------------- |
 | `--timesteps`  | `500000`              | Total training timesteps                              |
 | `--n-envs`     | all CPU cores         | Number of parallel environments                       |
-| `--save-path`  | `models/ppo_pendulum` | Model directory; `final.zip` is saved inside it |
-| `--load-model` | None                  | Path to a pre-trained model to continue training from |
+| `--save-path`  | `ppo_pendulum`        | Model name inside `models/`; `final.zip` is saved inside it |
+| `--load-model` | None                  | Name of a pre-trained model inside `models/` to continue training from |
 
 ### Visualize (no model)
 
@@ -50,7 +50,7 @@ python -m pendulum.visualize
 ### Visualize a trained model
 
 ```bash
-python -m pendulum.visualize --model models/ppo_pendulum
+python -m pendulum.visualize --model ppo_pendulum
 ```
 
 While the visualizer is running:
