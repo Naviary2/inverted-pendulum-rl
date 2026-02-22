@@ -89,7 +89,7 @@ class VisualizationConfig:
 
     # Force circle (toggled with "F" key)
     force_circle_thickness: float = 0.02  # m
-    force_circle_color: tuple = (255, 0, 0)  # red
+    force_circle_color: tuple = (255, 255, 255)  # white
 
     # Tick ruler (graduated markings below the track)
     tick_range: int = 3               # whole-meter radius of the ruler (draws ±tick_range)
