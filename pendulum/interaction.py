@@ -21,7 +21,7 @@ from PySide6.QtWidgets import (
 
 from .config import PendulumConfig, VisualizationConfig
 from .environment import CartPendulumEnv
-from .widget_base import _rgb
+from .widgets.widget_base import _rgb
 
 
 class CartItem(QGraphicsRectItem):

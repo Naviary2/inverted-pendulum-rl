@@ -140,20 +140,21 @@ class PendulumWindow(QMainWindow):
             self._fps_smooth = (1.0 - _FPS_SMOOTHING_ALPHA) * self._fps_smooth + _FPS_SMOOTHING_ALPHA * (1.0 / elapsed)
         self._last_tick_time = now
 
-        # --- Simulation time in tenths of a second ---
-        # Negative during warmup (-5 → 0), non-negative once simulation runs
+        # --- Simulation time in seconds, rounded to nearest 0.1 ---
+        # Negative during warmup (-0.5 → 0.0), non-negative once simulation runs
         if self._warming_up:
-            sim_time_tenths = int((now - self._warmup_start) * 10) - 5
+            sim_time_secs = round((now - self._warmup_start) * 10) / 10 - 0.5
         else:
-            sim_time_tenths = int((now - self._sim_start) * 10)
+            sim_time_secs = round((now - self._sim_start) * 10) / 10
 
         # --- Update HUD ---
         physics_hz = self.p_cfg.fps * self.p_cfg.physics_substeps
         self._scene.update_status(
-            sim_time_tenths,
+            sim_time_secs,
             self._fps_smooth,
             physics_hz,
             self.model is not None,
+            self._scene.cart_locked,
         )
 
         if not self._warming_up:
