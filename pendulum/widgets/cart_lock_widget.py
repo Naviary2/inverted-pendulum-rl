@@ -19,7 +19,7 @@ class CartLockWidget(BaseWidget):
     Layout (top → bottom):
     ┌──────────────┐
     │  CART LOCK   │  ← muted header label
-    │   🔒 / 🔓   │  ← lock.svg or unlock.svg, centred
+    │   🔒 / 🔓    │  ← lock.svg or unlock.svg, centred
     │  Locked/Free │  ← white when locked, grey when free
     └──────────────┘
 
