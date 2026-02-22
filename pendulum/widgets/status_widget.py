@@ -5,7 +5,7 @@
 from __future__ import annotations
 
 from PySide6.QtCore import Qt, QRectF
-from PySide6.QtGui import QColor, QFont, QPainter, QPen
+from PySide6.QtGui import QColor, QFont, QFontDatabase, QPainter, QPen
 from .widget_base import BaseWidget
 
 
@@ -45,8 +45,6 @@ class StatusWidget(BaseWidget):
     _COL_GAP: float = 12.0          # gap between the two columns
 
     # --- Typography ---
-    # Monospace fonts available on both macOS and Windows
-    _TIMER_FONT_FAMILY: str = "Courier New"
     _TIMER_FONT_SIZE: float = 34.0
     _LABEL_FONT_SIZE: float = 13.0
     _VALUE_FONT_SIZE: float = 18.0
@@ -94,9 +92,10 @@ class StatusWidget(BaseWidget):
         val_col_x = pad + title_col_w + self._COL_GAP
         val_col_w = inner_w - title_col_w - self._COL_GAP
 
-        # ── 1. Runtime (monospace, centered) ────────────────────────────────
-        timer_font = QFont(self._TIMER_FONT_FAMILY)
+        # ── 1. Runtime (system monospace, bold, centered) ───────────────────
+        timer_font = QFontDatabase.systemFont(QFontDatabase.SystemFont.FixedFont)
         timer_font.setPointSizeF(self._TIMER_FONT_SIZE)
+        timer_font.setBold(True)
         painter.setFont(timer_font)
         timer_color = self._COL_TIMER_NEG if self._sim_time_secs < 0 else self._COL_TIMER
         painter.setPen(QPen(timer_color))
@@ -110,7 +109,8 @@ class StatusWidget(BaseWidget):
         stats = [
             ("FPS",     f"{self._fps:.0f}",       self._COL_VALUE),
             ("PHYSICS", f"{self._physics_hz} Hz", self._COL_VALUE),
-            ("AGENT",   "Enabled" if self._agent_active else "Disabled", self._COL_VALUE),
+            ("AGENT",   "Enabled" if self._agent_active else "Disabled",
+                        self._COL_VALUE if self._agent_active else self._COL_LABEL),
         ]
         stat_y_start = self._PAD_TOP + self._TIMER_H
 
