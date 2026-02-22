@@ -23,7 +23,7 @@ from .interaction import CartItem, ForceCircleItem
 from .widget_base import BaseWidget, _rgb
 
 
-class SimulationWidget(BaseWidget):
+class PendulumWidget(BaseWidget):
     """Rounded-rect widget that visually contains the track, cart, and pendulums.
 
     Geometry is derived from the physics and visualisation configs; the only
@@ -61,7 +61,7 @@ class TickRulerItem(QGraphicsItem):
         * tenth-step positions - shortest, most transparent
 
     The item's ``boundingRect`` covers only the drawn ticks so it never
-    influences the layout of the parent ``SimulationWidget``.
+    influences the layout of the parent ``PendulumWidget``.
     """
 
     def __init__(self, v, parent=None):
@@ -146,7 +146,7 @@ class PendulumScene(QGraphicsScene):
         fg = _rgb(v.fg_color)
 
         # --- Simulation widget (rounded-rect container) ---
-        self._widget = SimulationWidget(p_cfg, v)
+        self._widget = PendulumWidget(p_cfg, v)
         self.addItem(self._widget)
 
         # --- Track (child of widget) ---

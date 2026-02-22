@@ -62,11 +62,8 @@ class BaseWidget(QGraphicsObject):
     Class attributes (override in subclasses to customise):
         _BORDER_SIZE          - outline stroke width in metres (constant)
         _BG_COLOR             - background fill colour
-        _BORDER_RADIUS_FACTOR - border_radius = factor × shortest_side (px)
-        _SHADOW_SPREAD_FACTOR - shadow_spread  = factor × shortest_side (px)
-
-    Factors are tuned so the default SimulationWidget (shortest side ≈ 552 px)
-    produces the same visuals as the original fixed values (0.12 m at scale 200).
+        _BORDER_RADIUS_FACTOR - border_radius = factor * shortest_side (px)
+        _SHADOW_SPREAD_FACTOR - shadow_spread  = factor * shortest_side (px)
     """
 
     _BORDER_SIZE: float = 0.02           # m  outline stroke width (all widgets)
