@@ -45,8 +45,16 @@ def _load_model(path: str):
     """
     if not path:
         return None
+    model_dir = Path(path)
+    if not model_dir.is_dir():
+        print(f"Error: model directory not found: {model_dir}")
+        sys.exit(1)
+    model_zip = model_dir / f"{FINAL_MODEL_FILENAME}.zip"
+    if not model_zip.is_file():
+        print(f"Error: trained model not found: {model_zip}")
+        sys.exit(1)
     from stable_baselines3 import PPO
-    return PPO.load(Path(path) / FINAL_MODEL_FILENAME)
+    return PPO.load(model_dir / FINAL_MODEL_FILENAME)
 
 
 # ---------------------------------------------------------------------------
