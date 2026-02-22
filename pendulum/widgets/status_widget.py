@@ -14,10 +14,10 @@ class StatusWidget(BaseWidget):
 
     Layout (top → bottom):
     ┌──────────────────────────────┐  ← white themed border
-    │           5.2s              │  ← runtime, large centered monospace font
-    │  FPS             238        │  ← title right-aligned | value left-aligned
-    │  PHYSICS         240 Hz     │
-    │  AGENT           Enabled    │
+    │           5.2s               │  ← runtime, large centered monospace font
+    │  FPS             238         │  ← title right-aligned | value left-aligned
+    │  PHYSICS         240 Hz      │
+    │  AGENT           Enabled     │
     └──────────────────────────────┘
 
     All values are updated each frame via ``update_status()``.
@@ -28,16 +28,16 @@ class StatusWidget(BaseWidget):
     _BG_COLOR: tuple = (28, 30, 34)   # dark blue-tinted background
 
     # --- Layout constants (pixels) ---
-    _W: float = 270.0
-    _H: float = 170.0
-    _PAD_X: float = 16.0    # horizontal outer padding
+    _W: float = 200.0
+    _H: float = 155.0
+    _PAD_X: float = 8.0    # horizontal outer padding. prevents text from touching border, cutting them off earlier
     _PAD_TOP: float = 8.0   # top padding
 
     # Runtime section
-    _TIMER_H: float = 52.0
+    _TIMER_H: float = 46.0
 
     # Stats section — row height for each label+value pair
-    _STAT_ROW_H: float = 32.0
+    _STAT_ROW_H: float = 30.0
 
     # Two-column split: left = titles (right-aligned), right = values (left-aligned)
     # Proportions of inner_w (W - 2*PAD_X)
@@ -92,7 +92,7 @@ class StatusWidget(BaseWidget):
         val_col_x = pad + title_col_w + self._COL_GAP
         val_col_w = inner_w - title_col_w - self._COL_GAP
 
-        # ── 1. Runtime (system monospace, bold, centered) ───────────────────
+        # ── 1. Runtime ───────────────────
         timer_font = QFontDatabase.systemFont(QFontDatabase.SystemFont.FixedFont)
         timer_font.setPointSizeF(self._TIMER_FONT_SIZE)
         timer_font.setBold(True)
