@@ -8,6 +8,7 @@ all available CPU cores.
 Usage:
     python -m pendulum.train                # defaults
     python -m pendulum.train --timesteps 1000000 --n-envs 8
+    python -m pendulum.train --save-path my_model
 """
 
 from __future__ import annotations
@@ -27,6 +28,8 @@ from .environment import CartPendulumEnv
 
 # The filename (without extension) used for the fully-trained model inside its model directory.
 FINAL_MODEL_FILENAME = "final"
+# The filename (without extension) used for the best model saved by EvalCallback.
+BEST_MODEL_FILENAME = "best_model"
 LIVE_DASHBOARD_DATA_FILENAME = "live"
 
 # ==============================================================================
@@ -236,10 +239,10 @@ def _parse_args():
     parser.add_argument("--timesteps", type=int, default=500_000)
     parser.add_argument("--n-envs", type=int, default=None,
                         help="Number of parallel envs (default: all cores)")
-    parser.add_argument("--save-path", type=str, default="models/ppo_pendulum",
-                        help=f"Model directory; {FINAL_MODEL_FILENAME}.zip is written inside it (e.g. models/ppo_pendulum/{FINAL_MODEL_FILENAME}.zip)")
+    parser.add_argument("--save-path", type=str, default="ppo_pendulum",
+                        help=f"Model name inside models/; {FINAL_MODEL_FILENAME}.zip is written there (e.g. models/ppo_pendulum/{FINAL_MODEL_FILENAME}.zip)")
     parser.add_argument("--load-model", type=str, default="",
-                        help=f"Model directory to resume training from (must contain {FINAL_MODEL_FILENAME}.zip)")
+                        help=f"Model name inside models/ to resume training from (must contain {FINAL_MODEL_FILENAME}.zip)")
     parser.add_argument("--tensorboard-log", type=str, default="logs/tensorboard",
                         help="Directory for TensorBoard logs (empty string to disable)")
     return parser.parse_args()
@@ -249,8 +252,8 @@ if __name__ == "__main__":
     args = _parse_args()
     t_cfg = TrainingConfig(
         total_timesteps=args.timesteps,
-        model_save_path=args.save_path,
-        model_load_path=args.load_model,
+        model_save_path=f"models/{args.save_path}",
+        model_load_path=f"models/{args.load_model}" if args.load_model else "",
         tensorboard_log=args.tensorboard_log,
     )
     if args.n_envs is not None:

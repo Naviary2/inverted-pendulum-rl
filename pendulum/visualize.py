@@ -11,7 +11,7 @@ Renders:
 
 Usage:
     python -m pendulum.visualize                        # random actions
-    python -m pendulum.visualize --model models/ppo_pendulum
+    python -m pendulum.visualize --model ppo_pendulum
 """
 
 from __future__ import annotations
@@ -30,7 +30,7 @@ from PySide6.QtWidgets import QApplication, QMainWindow
 from .config import PendulumConfig, TrainingConfig, VisualizationConfig
 from .environment import CartPendulumEnv
 from .renderer import PendulumScene, PendulumView
-from .train import FINAL_MODEL_FILENAME
+from .train import BEST_MODEL_FILENAME
 
 
 # ---------------------------------------------------------------------------
@@ -40,8 +40,8 @@ from .train import FINAL_MODEL_FILENAME
 def _load_model(path: str):
     """Load a trained PPO model (returns *None* when *path* is empty).
 
-    *path* must be the model directory; the final model is loaded from
-    ``<path>/<FINAL_MODEL_FILENAME>.zip`` automatically.
+    *path* must be the model directory; the best model is loaded from
+    ``<path>/<BEST_MODEL_FILENAME>.zip`` automatically.
     """
     if not path:
         return None
@@ -49,12 +49,12 @@ def _load_model(path: str):
     if not model_dir.is_dir():
         print(f"Error: model directory not found: {model_dir}")
         sys.exit(1)
-    model_zip = model_dir / f"{FINAL_MODEL_FILENAME}.zip"
+    model_zip = model_dir / f"{BEST_MODEL_FILENAME}.zip"
     if not model_zip.is_file():
         print(f"Error: trained model not found: {model_zip}")
         sys.exit(1)
     from stable_baselines3 import PPO
-    return PPO.load(model_dir / FINAL_MODEL_FILENAME)
+    return PPO.load(model_dir / BEST_MODEL_FILENAME)
 
 
 # ---------------------------------------------------------------------------
@@ -184,10 +184,10 @@ def run(
 def _parse_args():
     parser = argparse.ArgumentParser(description="Visualise pendulum")
     parser.add_argument("--model", type=str, default="",
-                        help="Path to trained model (omit for random actions)")
+                        help="Model name inside models/ (omit for no actions)")
     return parser.parse_args()
 
 
 if __name__ == "__main__":
     args = _parse_args()
-    run(model_path=args.model)
+    run(model_path=f"models/{args.model}" if args.model else "")
