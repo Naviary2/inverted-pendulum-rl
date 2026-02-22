@@ -131,7 +131,7 @@ def _make_env(pendulum_cfg: PendulumConfig, max_episode_steps: int):
 def train(
     pendulum_cfg: PendulumConfig | None = None,
     training_cfg: TrainingConfig | None = None,
-) -> PPO:
+) -> PPO | None:
     """Run PPO training and return the trained model."""
     p_cfg = pendulum_cfg or PendulumConfig()
     t_cfg = training_cfg or TrainingConfig()
@@ -175,11 +175,20 @@ def train(
     callbacks = [eval_callback, live_dashboard_callback]
 
     if t_cfg.model_load_path:
-        print(f"Loading existing model from {t_cfg.model_load_path} …")
+        load_dir = Path(t_cfg.model_load_path)
+        if not load_dir.is_dir():
+            print(f"Error: model directory not found: {load_dir}")
+            return None
+        load_zip = load_dir / f"{FINAL_MODEL_FILENAME}.zip"
+        if not load_zip.is_file():
+            print(f"Error: trained model not found: {load_zip}")
+            return None
+        resolved_load_path = str(load_dir / FINAL_MODEL_FILENAME)
+        print(f"Loading existing model from {load_zip} …")
         print("Note: hyperparameters (learning_rate, n_steps, etc.) are loaded "
               "from the saved model; TrainingConfig hyperparameters are ignored.")
         model = PPO.load(
-            t_cfg.model_load_path,
+            resolved_load_path,
             env=vec_env,
             verbose=1,
             tensorboard_log=t_cfg.tensorboard_log or None,
@@ -230,7 +239,7 @@ def _parse_args():
     parser.add_argument("--save-path", type=str, default="models/ppo_pendulum",
                         help=f"Model directory; {FINAL_MODEL_FILENAME}.zip is written inside it (e.g. models/ppo_pendulum/{FINAL_MODEL_FILENAME}.zip)")
     parser.add_argument("--load-model", type=str, default="",
-                        help="Path to an existing model to continue training")
+                        help=f"Model directory to resume training from (must contain {FINAL_MODEL_FILENAME}.zip)")
     parser.add_argument("--tensorboard-log", type=str, default="logs/tensorboard",
                         help="Directory for TensorBoard logs (empty string to disable)")
     return parser.parse_args()
