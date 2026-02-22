@@ -34,12 +34,12 @@ python -m pendulum.train
 
 Optional arguments:
 
-| Flag           | Default               | Description                                           |
-| -------------- | --------------------- | ----------------------------------------------------- |
-| `--timesteps`  | `500000`              | Total training timesteps                              |
-| `--n-envs`     | all CPU cores         | Number of parallel environments                       |
-| `--save-path`  | `models/ppo_pendulum` | Where to save the trained model                       |
-| `--load-model` | None                  | Path to a pre-trained model to continue training from |
+| Flag           | Default          | Description                                           |
+| -------------- | ---------------- | ----------------------------------------------------- |
+| `--timesteps`  | `500000`         | Total training timesteps                              |
+| `--n-envs`     | all CPU cores    | Number of parallel environments                       |
+| `--save-path`  | `ppo_pendulum`   | Directory inside `models/` to save the trained model  |
+| `--load-model` | None             | Path inside `models/` to a pre-trained model to continue training from |
 
 ### Visualize (no model)
 
@@ -50,7 +50,7 @@ python -m pendulum.visualize
 ### Visualize a trained model
 
 ```bash
-python -m pendulum.visualize --model models/ppo_pendulum
+python -m pendulum.visualize --model ppo_pendulum
 ```
 
 While the visualizer is running:

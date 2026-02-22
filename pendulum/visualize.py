@@ -11,7 +11,7 @@ Renders:
 
 Usage:
     python -m pendulum.visualize                        # random actions
-    python -m pendulum.visualize --model models/ppo_pendulum
+    python -m pendulum.visualize --model ppo_pendulum
 """
 
 from __future__ import annotations
@@ -19,6 +19,7 @@ from __future__ import annotations
 import argparse
 import signal
 import sys
+from pathlib import Path
 
 import numpy as np
 
@@ -36,11 +37,19 @@ from .renderer import PendulumScene, PendulumView
 # ---------------------------------------------------------------------------
 
 def _load_model(path: str):
-    """Load a trained PPO model (returns *None* when *path* is empty)."""
+    """Load a trained PPO model from a directory containing best_model.zip."""
     if not path:
         return None
+    model_dir = Path(path)
+    if not model_dir.exists():
+        print(f"Error: model directory '{path}' does not exist.", file=sys.stderr)
+        sys.exit(1)
+    model_file = model_dir / "best_model.zip"
+    if not model_file.exists():
+        print(f"Error: 'best_model.zip' not found in '{path}'.", file=sys.stderr)
+        sys.exit(1)
     from stable_baselines3 import PPO
-    return PPO.load(path)
+    return PPO.load(str(model_file))
 
 
 # ---------------------------------------------------------------------------
@@ -170,10 +179,11 @@ def run(
 def _parse_args():
     parser = argparse.ArgumentParser(description="Visualise pendulum")
     parser.add_argument("--model", type=str, default="",
-                        help="Path to trained model (omit for random actions)")
+                        help="Directory inside models/ containing best_model.zip (omit for random actions)")
     return parser.parse_args()
 
 
 if __name__ == "__main__":
     args = _parse_args()
-    run(model_path=args.model)
+    model_path = str(Path("models") / args.model) if args.model else ""
+    run(model_path=model_path)

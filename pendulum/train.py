@@ -60,12 +60,12 @@ def train(
     )
 
     # Ensure save directory exists
-    save_dir = Path(t_cfg.model_save_path).parent
+    save_dir = Path(t_cfg.model_save_path)
     save_dir.mkdir(parents=True, exist_ok=True)
 
     eval_callback = EvalCallback(
         eval_env,
-        best_model_save_path=str(save_dir / "best"),
+        best_model_save_path=str(save_dir),
         log_path=str(save_dir / "logs"),
         eval_freq=max(t_cfg.n_steps // t_cfg.n_envs, 1) * 5,
         n_eval_episodes=10,
@@ -106,8 +106,8 @@ def train(
         print(f"TensorBoard logs: {t_cfg.tensorboard_log}  "
               f"(run: tensorboard --logdir {t_cfg.tensorboard_log})")
     model.learn(total_timesteps=t_cfg.total_timesteps, callback=eval_callback)
-    model.save(t_cfg.model_save_path)
-    print(f"Model saved to {t_cfg.model_save_path}")
+    model.save(str(save_dir / "final"))
+    print(f"Model saved to {str(save_dir / 'final')}")
 
     vec_env.close()
     eval_env.close()
@@ -120,9 +120,10 @@ def _parse_args():
     parser.add_argument("--timesteps", type=int, default=500_000)
     parser.add_argument("--n-envs", type=int, default=None,
                         help="Number of parallel envs (default: all cores)")
-    parser.add_argument("--save-path", type=str, default="models/ppo_pendulum")
+    parser.add_argument("--save-path", type=str, default="ppo_pendulum",
+                        help="Directory inside models/ to save the trained model")
     parser.add_argument("--load-model", type=str, default="",
-                        help="Path to an existing model to continue training")
+                        help="Path inside models/ to an existing model to continue training")
     parser.add_argument("--tensorboard-log", type=str, default="logs/tensorboard",
                         help="Directory for TensorBoard logs (empty string to disable)")
     return parser.parse_args()
@@ -130,10 +131,12 @@ def _parse_args():
 
 if __name__ == "__main__":
     args = _parse_args()
+    save_path = str(Path("models") / args.save_path)
+    load_path = str(Path("models") / args.load_model) if args.load_model else ""
     t_cfg = TrainingConfig(
         total_timesteps=args.timesteps,
-        model_save_path=args.save_path,
-        model_load_path=args.load_model,
+        model_save_path=save_path,
+        model_load_path=load_path,
         tensorboard_log=args.tensorboard_log,
     )
     if args.n_envs is not None:
