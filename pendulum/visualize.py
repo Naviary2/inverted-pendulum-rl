@@ -27,9 +27,10 @@ from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QKeyEvent
 from PySide6.QtWidgets import QApplication, QMainWindow
 
-from .config import PendulumConfig, TrainingConfig, VisualizationConfig, FINAL_MODEL_FILENAME
+from .config import PendulumConfig, TrainingConfig, VisualizationConfig
 from .environment import CartPendulumEnv
 from .renderer import PendulumScene, PendulumView
+from .train import FINAL_MODEL_FILENAME
 
 
 # ---------------------------------------------------------------------------
