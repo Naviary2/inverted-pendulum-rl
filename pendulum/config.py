@@ -63,7 +63,7 @@ class TrainingConfig:
 class VisualizationConfig:
     """Display settings for the Qt viewer."""
 
-    bg_color: tuple = (60, 60, 60) # grey
+    bg_color: tuple = (70, 70, 70) # grey
 
     width: int = 1920
     height: int = 1080
