@@ -136,6 +136,76 @@ class TickRulerItem(QGraphicsItem):
             )
 
 
+class StatusWidget(BaseWidget):
+    """HUD widget that displays simulation status in the top-left corner.
+
+    Shows:
+    - Simulation time in tenths of a second (negative during warmup, 0+ during sim)
+    - Measured render FPS
+    - Physics update rate in Hz
+    - Whether an agent is controlling the cart
+    """
+
+    _THEME_COLOR: tuple[int, int, int] = (50, 180, 50)   # green accent
+    _BORDER_SIZE: float = 2.0             # px (scale=1 so this equals px directly)
+
+    # Layout constants (pixels)
+    _WIDTH_PX: float = 220.0
+    _HEIGHT_PX: float = 130.0
+    _PADDING_X: float = 14.0
+    _PADDING_Y: float = 12.0
+    _LINE_HEIGHT: float = 26.0
+    _FONT_FAMILY: str = "Courier New"
+    _FONT_SIZE_PT: float = 11.5
+
+    def __init__(self, parent=None):
+        rect = QRectF(0.0, 0.0, self._WIDTH_PX, self._HEIGHT_PX)
+        # Pass scale=1.0 because all dimensions are already in pixels
+        super().__init__(rect, self._THEME_COLOR, 1.0, parent)
+        self._sim_time_tenths: int = -5
+        self._fps: float = 0.0
+        self._physics_hz: int = 0
+        self._agent_active: bool = False
+
+    def update_status(
+        self,
+        sim_time_tenths: int,
+        fps: float,
+        physics_hz: int,
+        agent_active: bool,
+    ) -> None:
+        """Refresh the displayed values and trigger a repaint."""
+        self._sim_time_tenths = sim_time_tenths
+        self._fps = fps
+        self._physics_hz = physics_hz
+        self._agent_active = agent_active
+        self.update()
+
+    def paint(self, painter: QPainter, option, widget=None) -> None:  # noqa: ARG002
+        super().paint(painter, option, widget)
+
+        font = QFont(self._FONT_FAMILY)
+        font.setStyleHint(QFont.StyleHint.Monospace)
+        font.setPointSizeF(self._FONT_SIZE_PT)
+        painter.setFont(font)
+        painter.setPen(QPen(QColor(220, 220, 220, 230)))
+
+        rows = [
+            f"Time:   {self._sim_time_tenths}",
+            f"FPS:    {self._fps:.0f}",
+            f"Hz:     {self._physics_hz}",
+            f"Agent:  {'YES' if self._agent_active else 'NO'}",
+        ]
+        text_w = self._WIDTH_PX - 2.0 * self._PADDING_X
+        for i, row in enumerate(rows):
+            y = self._PADDING_Y + i * self._LINE_HEIGHT
+            painter.drawText(
+                QRectF(self._PADDING_X, y, text_w, self._LINE_HEIGHT),
+                Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter,
+                row,
+            )
+
+
 class PendulumScene(QGraphicsScene):
     """QGraphicsScene that holds all simulation items."""
 
@@ -211,7 +281,27 @@ class PendulumScene(QGraphicsScene):
         # --- Force circle (child of widget) ---
         self._force_circle = ForceCircleItem(env, p_cfg, v, parent=self._widget)
 
+        # --- Status HUD widget (top-left corner, on top of everything) ---
+        margin_px = 20.0
+        self._status_widget = StatusWidget()
+        self._status_widget.setPos(
+            -v.width / 2 + margin_px,
+            -v.height / 2 + margin_px,
+        )
+        self._status_widget.setZValue(100)
+        self.addItem(self._status_widget)
+
     # ---------------------------------------------------------------
+
+    def update_status(
+        self,
+        sim_time_tenths: int,
+        fps: float,
+        physics_hz: int,
+        agent_active: bool,
+    ) -> None:
+        """Forward status values to the HUD widget."""
+        self._status_widget.update_status(sim_time_tenths, fps, physics_hz, agent_active)
 
     def sync_from_state(self, state: np.ndarray):
         """Update item positions from MuJoCo state ``[x, θ, ẋ, θ̇]``."""
