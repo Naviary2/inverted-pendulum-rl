@@ -27,25 +27,26 @@ class CartLockWidget(BaseWidget):
     Hovering shows a semi-transparent highlight and a pointer cursor.
     """
 
-    _THEME_COLOR: tuple = (70, 140, 255)   # blue, matching PendulumWidget
+    _THEME_COLOR: tuple = (220, 160, 40)    # amber — unique across all widgets
     _BG_COLOR: tuple = (35, 35, 35)
+    _BG_COLOR_LOCKED: tuple = (195, 115, 20)  # amber background when cart is locked
 
     # Geometry
-    _SIZE: float = 130.0   # width == height → roughly square
+    _SIZE: float = 150.0   # width == height → roughly square
 
     # Layout (pixels)
-    _PAD_TOP: float = 8.0
+    _PAD_TOP: float = 10.0
     _PAD_SIDE: float = 0.0    # header/status span full width and are centred
-    _HEADER_H: float = 18.0
-    _GAP: float = 4.0
-    _ICON_H: float = 66.0
-    _STATUS_H: float = 18.0
-    _PAD_BOT: float = 8.0
-    # Total: 8 + 18 + 4 + 66 + 4 + 18 + 8 = 126 → fits in 130 with 2 px margin each side
+    _HEADER_H: float = 22.0
+    _GAP: float = 5.0
+    _ICON_H: float = 76.0
+    _STATUS_H: float = 22.0
+    _PAD_BOT: float = 10.0
+    # Total: 10 + 22 + 5 + 76 + 5 + 22 + 10 = 150 → fills widget exactly
 
     # Typography
-    _HEADER_FONT_SIZE: float = 9.5
-    _STATUS_FONT_SIZE: float = 12.0
+    _HEADER_FONT_SIZE: float = 11.0
+    _STATUS_FONT_SIZE: float = 14.0
 
     # Colours
     _COL_HEADER: QColor = QColor(115, 118, 130)     # muted blue-grey
@@ -91,13 +92,19 @@ class CartLockWidget(BaseWidget):
     def paint(self, painter: QPainter, option, widget=None) -> None:  # noqa: ARG002
         super().paint(painter, option, widget)
 
+        locked = self._cart_item.is_locked
+
+        # Amber background overlay when locked
+        if locked:
+            painter.setPen(QPen(Qt.PenStyle.NoPen))
+            painter.setBrush(QBrush(QColor(*self._BG_COLOR_LOCKED)))
+            painter.drawRoundedRect(self._rect, self._radius_px, self._radius_px)
+
         # Hover highlight overlay
         if self._hovered:
             painter.setPen(QPen(Qt.PenStyle.NoPen))
             painter.setBrush(QBrush(self._COL_HOVER))
             painter.drawRoundedRect(self._rect, self._radius_px, self._radius_px)
-
-        locked = self._cart_item.is_locked
 
         # ── 1. Header ────────────────────────────────────────────────
         header_font = QFont()
