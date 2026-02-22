@@ -109,11 +109,6 @@ class PendulumScene(QGraphicsScene):
 
     # ---------------------------------------------------------------
 
-    @property
-    def cart_locked(self) -> bool:
-        """Return whether the cart is currently locked in place."""
-        return self._cart.is_locked
-
     def update_status(
         self,
         sim_time_secs: float,

@@ -20,6 +20,7 @@ import argparse
 import signal
 import sys
 import time
+from collections import deque
 from pathlib import Path
 
 import numpy as np
@@ -80,8 +81,9 @@ class PendulumWindow(QMainWindow):
         self._warming_up = True
         self._warmup_start: float = time.perf_counter()
         self._sim_start: float = 0.0  # set properly by _end_warmup()
-        self._last_tick_time: float = time.perf_counter()
-        self._fps_smooth: float = 0.0
+        # FPS: count actual tick calls in the last second
+        self._fps_tick_times: deque[float] = deque()
+        self._fps_display: float = 0.0
 
         self.setWindowTitle("Inverted Pendulum")
         self.setFixedSize(v.width, v.height)
@@ -133,12 +135,12 @@ class PendulumWindow(QMainWindow):
     def _tick(self):
         now = time.perf_counter()
 
-        # --- FPS (exponential moving average) ---
-        _FPS_SMOOTHING_ALPHA = 0.1
-        elapsed = now - self._last_tick_time
-        if elapsed > 0:
-            self._fps_smooth = (1.0 - _FPS_SMOOTHING_ALPHA) * self._fps_smooth + _FPS_SMOOTHING_ALPHA * (1.0 / elapsed)
-        self._last_tick_time = now
+        # --- FPS: count actual tick calls in the last 1-second window ---
+        self._fps_tick_times.append(now)
+        cutoff = now - 1.0
+        while self._fps_tick_times and self._fps_tick_times[0] < cutoff:
+            self._fps_tick_times.popleft()
+        self._fps_display = float(len(self._fps_tick_times))
 
         # --- Simulation time in seconds, rounded to nearest 0.1 ---
         # Negative during warmup (-0.5 → 0.0), non-negative once simulation runs
@@ -151,7 +153,7 @@ class PendulumWindow(QMainWindow):
         physics_hz = self.p_cfg.fps * self.p_cfg.physics_substeps
         self._scene.update_status(
             sim_time_secs,
-            self._fps_smooth,
+            self._fps_display,
             physics_hz,
             self.model is not None,
         )

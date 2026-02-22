@@ -14,10 +14,10 @@ class StatusWidget(BaseWidget):
 
     Layout (top → bottom):
     ┌──────────────────────────────┐  ← white themed border
-    │  5.2 s                       │  ← runtime, large left-aligned font
-    │  FPS             238         │  ← title right-aligned | value left-aligned
-    │  PHYSICS         240 Hz      │
-    │  AGENT           Enabled     │
+    │           5.2s              │  ← runtime, large centered monospace font
+    │  FPS             238        │  ← title right-aligned | value left-aligned
+    │  PHYSICS         240 Hz     │
+    │  AGENT           Enabled    │
     └──────────────────────────────┘
 
     All values are updated each frame via ``update_status()``.
@@ -29,15 +29,15 @@ class StatusWidget(BaseWidget):
 
     # --- Layout constants (pixels) ---
     _W: float = 270.0
-    _H: float = 185.0
+    _H: float = 170.0
     _PAD_X: float = 16.0    # horizontal outer padding
-    _PAD_TOP: float = 10.0  # top padding
+    _PAD_TOP: float = 8.0   # top padding
 
     # Runtime section
-    _TIMER_H: float = 58.0
+    _TIMER_H: float = 52.0
 
     # Stats section — row height for each label+value pair
-    _STAT_ROW_H: float = 36.0
+    _STAT_ROW_H: float = 32.0
 
     # Two-column split: left = titles (right-aligned), right = values (left-aligned)
     # Proportions of inner_w (W - 2*PAD_X)
@@ -45,16 +45,17 @@ class StatusWidget(BaseWidget):
     _COL_GAP: float = 12.0          # gap between the two columns
 
     # --- Typography ---
+    # Monospace fonts available on both macOS and Windows
+    _TIMER_FONT_FAMILY: str = "Courier New"
     _TIMER_FONT_SIZE: float = 34.0
-    _LABEL_FONT_SIZE: float = 12.0
-    _VALUE_FONT_SIZE: float = 17.0
+    _LABEL_FONT_SIZE: float = 13.0
+    _VALUE_FONT_SIZE: float = 18.0
 
     # --- Colours ---
     _COL_LABEL: QColor = QColor(115, 118, 130)      # muted blue-grey for titles
     _COL_VALUE: QColor = QColor(235, 237, 242)      # near-white for values
     _COL_TIMER: QColor = QColor(235, 237, 242)      # white timer
     _COL_TIMER_NEG: QColor = QColor(130, 132, 140)  # grey when warmup (negative)
-    _COL_AGENT_ON: QColor = QColor(90, 200, 100)    # green when agent enabled
 
     def __init__(self, parent=None):
         rect = QRectF(0.0, 0.0, self._W, self._H)
@@ -93,24 +94,23 @@ class StatusWidget(BaseWidget):
         val_col_x = pad + title_col_w + self._COL_GAP
         val_col_w = inner_w - title_col_w - self._COL_GAP
 
-        # ── 1. Runtime ──────────────────────────────────────────────────────
-        timer_font = QFont()
+        # ── 1. Runtime (monospace, centered) ────────────────────────────────
+        timer_font = QFont(self._TIMER_FONT_FAMILY)
         timer_font.setPointSizeF(self._TIMER_FONT_SIZE)
         painter.setFont(timer_font)
         timer_color = self._COL_TIMER_NEG if self._sim_time_secs < 0 else self._COL_TIMER
         painter.setPen(QPen(timer_color))
         painter.drawText(
             QRectF(pad, self._PAD_TOP, inner_w, self._TIMER_H),
-            Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter,
-            f"{self._sim_time_secs:.1f} s",
+            Qt.AlignmentFlag.AlignCenter,
+            f"{self._sim_time_secs:.1f}s",
         )
 
         # ── 2. Stat rows ─────────────────────────────────────────────────────
         stats = [
-            ("FPS",     f"{self._fps:.0f}",        self._COL_VALUE),
-            ("PHYSICS", f"{self._physics_hz} Hz",  self._COL_VALUE),
-            ("AGENT",   "Enabled" if self._agent_active else "Disabled",
-                        self._COL_AGENT_ON if self._agent_active else self._COL_LABEL),
+            ("FPS",     f"{self._fps:.0f}",       self._COL_VALUE),
+            ("PHYSICS", f"{self._physics_hz} Hz", self._COL_VALUE),
+            ("AGENT",   "Enabled" if self._agent_active else "Disabled", self._COL_VALUE),
         ]
         stat_y_start = self._PAD_TOP + self._TIMER_H
 
@@ -138,4 +138,5 @@ class StatusWidget(BaseWidget):
                 Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter,
                 value,
             )
+
 
