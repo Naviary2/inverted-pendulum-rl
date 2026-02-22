@@ -88,16 +88,6 @@ class VisualizationConfig:
     force_circle_thickness: float = 0.02  # m
     force_circle_color: tuple = (255, 0, 0)  # red
 
-    # Simulation widget (rounded-rect container for track / cart / pendulums)
-    widget_padding_x: float = 1.0      # m  horizontal padding (left / right)
-    widget_padding_y: float = 0.25      # m  vertical padding (top / bottom)
-    widget_bg_color: tuple = (35, 35, 35)  # slightly darker than bg_color
-    widget_border_radius: float = 0.12  # m  corner roundness
-    widget_theme_color: tuple = (70, 140, 255)  # blue accent color
-    # widget_theme_color: tuple = (50, 160, 30)  # green
-    widget_outline_width: float = 0.02  # m  outline stroke width
-    widget_shadow_blur: float = 0.12     # m  drop-shadow blur radius
-
     # Tick ruler (graduated markings below the track)
     tick_range: int = 3               # whole-meter radius of the ruler (draws ±tick_range)
     tick_gap: float = 0.35            # m  gap from track bottom edge to tick centre line

@@ -12,7 +12,6 @@ from PySide6.QtWidgets import (
     QGraphicsEllipseItem,
     QGraphicsItem,
     QGraphicsLineItem,
-    QGraphicsObject,
     QGraphicsPathItem,
     QGraphicsScene,
     QGraphicsView,
@@ -21,99 +20,42 @@ from PySide6.QtWidgets import (
 from .config import PendulumConfig, VisualizationConfig
 from .environment import CartPendulumEnv
 from .interaction import CartItem, ForceCircleItem
+from .widget_base import BaseWidget, _rgb
 
 
-def _rgb(t: tuple) -> QColor:
-    """Convert an (r, g, b) or (r, g, b, a) tuple to a QColor."""
-    return QColor(*t)
-
-
-def _draw_rounded_rect_shadow(
-    painter: QPainter,
-    rect: QRectF,
-    radius_px: float,
-    spread: float,
-    layers: int = 8,
-) -> None:
-    """Draw a layered soft drop shadow for a rounded rectangle.
-
-    Paints ``layers`` semi-transparent rounded rects that grow from the
-    rect outward.  The outermost layer always ends exactly at ``spread``
-    pixels from ``rect``, regardless of ``layers``; more layers just pack
-    them more densely together within that same spread distance.
-    """
-    painter.setPen(QPen(Qt.PenStyle.NoPen))
-    for i in range(layers, 0, -1):
-        t = i / layers                      # 1.0 (outermost) → 1/layers (innermost)
-        alpha = int(10 * (1 - t) * t * 4)  # bell-curve alpha, peak in the middle
-        expand = spread * t
-        shadow_rect = rect.adjusted(-expand, -expand, expand, expand)
-        painter.setBrush(QBrush(QColor(0, 0, 0, alpha)))
-        painter.drawRoundedRect(shadow_rect, radius_px + expand, radius_px + expand)
-
-
-class SimulationWidget(QGraphicsObject):
+class PendulumWidget(BaseWidget):
     """Rounded-rect widget that visually contains the track, cart, and pendulums.
 
-    Constants (all lengths in metres):
-        widget_padding_x      - left / right padding inside the rounded rect
-        widget_padding_y      - top / bottom padding inside the rounded rect
-        widget_bg_color       - background fill colour (slightly darker than scene bg)
-        widget_border_radius  - corner radius of the rounded rect
-        widget_theme_color    - outline / accent colour
-        widget_outline_width  - stroke width of the outline
-        widget_shadow_blur    - blur radius of the drop shadow
+    Geometry is derived from the physics and visualisation configs; the only
+    styling parameter is ``theme_color``, inherited from ``BaseWidget``.
+
+    Padding around the track content is owned by this widget as constants;
+    the base class receives only the final dimensions.
     """
 
-    def __init__(self, p_cfg, v, parent=None):
-        super().__init__(parent)
-        self._v = v
+    # Padding around the track content, in metres (constant for this widget type)
+    _PADDING_X: float = 1.0   # m  left / right padding
+    _PADDING_Y: float = 0.25  # m  top / bottom padding
+    _THEME_COLOR: tuple = (70, 140, 255)  # blue accent color
+    # _THEME_COLOR: tuple = (50, 160, 30)  # green
 
-        # Widget half-width: half the physics track + cart-body margin + h-padding
+    def __init__(self, p_cfg, v, parent=None):
+        # Base content half-width: half the physics track + cart-body visual margin
         # The margin uses 0.8 × cart_body_width because the full track visual width
         # adds 1.6 × body_w (one full body width split equally on each side).
-        half_w = (
-            p_cfg.track_length / 2
-            + v.cart_body_width * 0.8
-            + v.widget_padding_x
-        ) * v.scale
+        base_half_w = (p_cfg.track_length / 2 + v.cart_body_width * 0.8) * v.scale
 
-        # Widget top edge: total pendulum height above cart + node width + v-padding
-        total_link_len = sum(p_cfg.link_lengths) + p_cfg.node_radius
-        top = -(total_link_len + v.widget_padding_y) * v.scale
+        # Base content half-height: total pendulum height above/below cart + node radius
+        base_half_h = (sum(p_cfg.link_lengths) + p_cfg.node_radius) * v.scale
 
-        # Widget bottom edge: total pendulum height below cart + node width + v-padding
-        bottom = -top
+        # Full widget dimensions = base content + padding
+        padding_x_px = self._PADDING_X * v.scale
+        padding_y_px = self._PADDING_Y * v.scale
+        half_w = base_half_w + padding_x_px
+        half_h = base_half_h + padding_y_px
 
-        self._rect = QRectF(-half_w, top, 2 * half_w, bottom - top)
-
-        # Shadow spread in pixels, pre-computed once from the config constant.
-        self._shadow_spread = v.widget_shadow_blur * v.scale
-
-    def boundingRect(self) -> QRectF:
-        # Expand by half the outline pen width so the stroke is never clipped,
-        # and by the full shadow spread so the shadow is never clipped either.
-        half_pen = self._v.widget_outline_width * self._v.scale / 2
-        spread = self._shadow_spread
-        margin = half_pen + spread
-        return self._rect.adjusted(-margin, -margin, margin, margin)
-
-    def paint(self, painter: QPainter, option, widget=None) -> None:  # noqa: ARG002
-        v = self._v
-        radius_px = v.widget_border_radius * v.scale
-
-        # --- Shadow (painted statically; does NOT re-run when children move) ---
-        # Layered semi-transparent rounded rects approximate a soft drop shadow
-        # without using QGraphicsDropShadowEffect (which forces a full offscreen
-        # re-render every frame when any child item changes position).
-        _draw_rounded_rect_shadow(painter, self._rect, radius_px, self._shadow_spread)
-
-        # --- Widget background + themed outline ---
-        pen = QPen(_rgb(v.widget_theme_color), v.widget_outline_width * v.scale)
-        pen.setJoinStyle(Qt.PenJoinStyle.RoundJoin)
-        painter.setPen(pen)
-        painter.setBrush(QBrush(_rgb(v.widget_bg_color)))
-        painter.drawRoundedRect(self._rect, radius_px, radius_px)
+        rect = QRectF(-half_w, -half_h, 2 * half_w, 2 * half_h)
+        super().__init__(rect, self._THEME_COLOR, v.scale, parent)
 
 
 class TickRulerItem(QGraphicsItem):
@@ -126,7 +68,7 @@ class TickRulerItem(QGraphicsItem):
         * tenth-step positions - shortest, most transparent
 
     The item's ``boundingRect`` covers only the drawn ticks so it never
-    influences the layout of the parent ``SimulationWidget``.
+    influences the layout of the parent ``PendulumWidget``.
     """
 
     def __init__(self, v, parent=None):
@@ -211,7 +153,7 @@ class PendulumScene(QGraphicsScene):
         fg = _rgb(v.fg_color)
 
         # --- Simulation widget (rounded-rect container) ---
-        self._widget = SimulationWidget(p_cfg, v)
+        self._widget = PendulumWidget(p_cfg, v)
         self.addItem(self._widget)
 
         # --- Track (child of widget) ---
@@ -254,13 +196,13 @@ class PendulumScene(QGraphicsScene):
 
             # inner node
             inner = QGraphicsEllipseItem(-node_inner, -node_inner, 2 * node_inner, 2 * node_inner, self._widget)
-            inner.setBrush(QBrush(_rgb(v.widget_theme_color)))
+            inner.setBrush(QBrush(_rgb(PendulumWidget._THEME_COLOR)))
             inner.setPen(QPen(Qt.PenStyle.NoPen))
             self._nodes_inner.append(inner)
 
 
         # --- Cart (child of widget) ---
-        self._cart = CartItem(env, p_cfg, v, parent=self._widget)
+        self._cart = CartItem(env, p_cfg, v, PendulumWidget._THEME_COLOR, parent=self._widget)
 
         # Track the previous cart x position so we can compute delta for wheel rotation.
         # None on the first frame to avoid a large spurious rotation.
