@@ -25,6 +25,10 @@ from stable_baselines3.common.vec_env import SubprocVecEnv
 from .config import PendulumConfig, TrainingConfig
 from .environment import CartPendulumEnv
 
+# The filename (without extension) used for the fully-trained model inside its model directory.
+FINAL_MODEL_FILENAME = "final"
+LIVE_DASHBOARD_DATA_FILENAME = "live"
+
 # ==============================================================================
 # Custom Callback for Live Visualization and Checkpointing
 # ==============================================================================
@@ -127,7 +131,7 @@ def _make_env(pendulum_cfg: PendulumConfig, max_episode_steps: int):
 def train(
     pendulum_cfg: PendulumConfig | None = None,
     training_cfg: TrainingConfig | None = None,
-) -> PPO:
+) -> PPO | None:
     """Run PPO training and return the trained model."""
     p_cfg = pendulum_cfg or PendulumConfig()
     t_cfg = training_cfg or TrainingConfig()
@@ -144,17 +148,20 @@ def train(
         )
     )
 
-    # Ensure save directory exists
-    # The main model will be saved as 'ppo_pendulum.zip', but checkpoints and live data
-    # will go into a subdirectory named 'ppo_pendulum' to keep things organized.
+    # Ensure save directories exist.
+    # All files for one model live under save_dir (e.g. models/ppo_pendulum/).
+    # Live dashboard data goes into save_dir/live/ and the final trained model
+    # is saved as save_dir/final.zip.
     save_dir = Path(t_cfg.model_save_path).parent / Path(t_cfg.model_save_path).stem
     save_dir.mkdir(parents=True, exist_ok=True)
+    live_dir = save_dir / LIVE_DASHBOARD_DATA_FILENAME
+    live_dir.mkdir(parents=True, exist_ok=True)
 
     # --- Setup Callbacks ---
     # 1. EvalCallback saves the "best" model based on performance on a separate test env
     eval_callback = EvalCallback(
         eval_env,
-        best_model_save_path=str(save_dir / "best_model"),
+        best_model_save_path=str(save_dir),
         log_path=str(save_dir / "logs"),
         eval_freq=max(t_cfg.n_steps // t_cfg.n_envs, 1) * 5,
         n_eval_episodes=10,
@@ -162,17 +169,26 @@ def train(
     )
     
     # 2. Our custom LiveDashboardCallback for the UI
-    live_dashboard_callback = LiveDashboardCallback(save_dir=save_dir, save_freq=50) # Save a checkpoint every 50 episodes
+    live_dashboard_callback = LiveDashboardCallback(save_dir=live_dir, save_freq=50) # Save a checkpoint every 50 episodes
     
     # Combine callbacks into a list
     callbacks = [eval_callback, live_dashboard_callback]
 
     if t_cfg.model_load_path:
-        print(f"Loading existing model from {t_cfg.model_load_path} …")
+        load_dir = Path(t_cfg.model_load_path)
+        if not load_dir.is_dir():
+            print(f"Error: model directory not found: {load_dir}")
+            return None
+        load_zip = load_dir / f"{FINAL_MODEL_FILENAME}.zip"
+        if not load_zip.is_file():
+            print(f"Error: trained model not found: {load_zip}")
+            return None
+        resolved_load_path = str(load_dir / FINAL_MODEL_FILENAME)
+        print(f"Loading existing model from {load_zip} …")
         print("Note: hyperparameters (learning_rate, n_steps, etc.) are loaded "
               "from the saved model; TrainingConfig hyperparameters are ignored.")
         model = PPO.load(
-            t_cfg.model_load_path,
+            resolved_load_path,
             env=vec_env,
             verbose=1,
             tensorboard_log=t_cfg.tensorboard_log or None,
@@ -204,9 +220,10 @@ def train(
     # Pass the list of callbacks to the learn method
     model.learn(total_timesteps=t_cfg.total_timesteps, callback=callbacks)
     
-    # Save the final model at the end of the full training run
-    model.save(t_cfg.model_save_path)
-    print(f"Final model saved to {t_cfg.model_save_path}")
+    # Save the final model inside the model directory as final.zip
+    final_model_path = save_dir / FINAL_MODEL_FILENAME
+    model.save(final_model_path)
+    print(f"Final model saved to {final_model_path}.zip")
 
     vec_env.close()
     eval_env.close()
@@ -219,9 +236,10 @@ def _parse_args():
     parser.add_argument("--timesteps", type=int, default=500_000)
     parser.add_argument("--n-envs", type=int, default=None,
                         help="Number of parallel envs (default: all cores)")
-    parser.add_argument("--save-path", type=str, default="models/ppo_pendulum.zip")
+    parser.add_argument("--save-path", type=str, default="models/ppo_pendulum",
+                        help=f"Model directory; {FINAL_MODEL_FILENAME}.zip is written inside it (e.g. models/ppo_pendulum/{FINAL_MODEL_FILENAME}.zip)")
     parser.add_argument("--load-model", type=str, default="",
-                        help="Path to an existing model to continue training")
+                        help=f"Model directory to resume training from (must contain {FINAL_MODEL_FILENAME}.zip)")
     parser.add_argument("--tensorboard-log", type=str, default="logs/tensorboard",
                         help="Directory for TensorBoard logs (empty string to disable)")
     return parser.parse_args()
