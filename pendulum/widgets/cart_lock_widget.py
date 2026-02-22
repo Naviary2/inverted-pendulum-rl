@@ -27,7 +27,7 @@ class CartLockWidget(BaseWidget):
     Hovering shows a semi-transparent highlight and a pointer cursor.
     """
 
-    _THEME_COLOR: tuple = (220, 160, 40)    # amber — unique across all widgets
+    _THEME_COLOR: tuple = (220, 160, 40)    # amber
     _BG_COLOR: tuple = (35, 35, 35)
     _BG_COLOR_LOCKED: tuple = (195, 115, 20)  # amber background when cart is locked
 
@@ -38,19 +38,19 @@ class CartLockWidget(BaseWidget):
     _PAD_TOP: float = 10.0
     _PAD_SIDE: float = 0.0    # header/status span full width and are centred
     _HEADER_H: float = 22.0
-    _GAP: float = 5.0
+    _GAP: float = 3.0
     _ICON_H: float = 76.0
     _STATUS_H: float = 22.0
     _PAD_BOT: float = 10.0
     # Total: 10 + 22 + 5 + 76 + 5 + 22 + 10 = 150 → fills widget exactly
 
     # Typography
-    _HEADER_FONT_SIZE: float = 11.0
-    _STATUS_FONT_SIZE: float = 14.0
+    _HEADER_FONT_SIZE: float = 14.0
+    _STATUS_FONT_SIZE: float = 18.0
 
     # Colours
     _COL_HEADER: QColor = QColor(115, 118, 130)     # muted blue-grey
-    _COL_FREE: QColor = QColor(115, 118, 130)       # grey when free
+    _COL_FREE: QColor = QColor(235, 237, 242)       # grey when free
     _COL_LOCKED: QColor = QColor(235, 237, 242)     # near-white when locked
     _COL_HOVER: QColor = QColor(255, 255, 255, 18)  # subtle white tint on hover
 
