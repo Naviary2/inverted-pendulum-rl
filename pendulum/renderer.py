@@ -119,9 +119,10 @@ class PendulumScene(QGraphicsScene):
         self.addItem(self._cart_lock_widget)
 
         # --- Force widget (always visible, left of the pendulum widget, vertically centred) ---
+        pw_height = self._widget.rect.height()
         force_widget_x = _pendulum_offset_x + self._widget.rect.left() - _agent_gap - _agent_w
-        force_widget_y = -ForceWidget._H / 2.0
-        self._force_widget = ForceWidget(p_cfg.force_magnitude)
+        force_widget_y = -pw_height / 2.0
+        self._force_widget = ForceWidget(p_cfg.force_magnitude, height=pw_height)
         self._force_widget.setPos(force_widget_x, force_widget_y)
         self.addItem(self._force_widget)
 
