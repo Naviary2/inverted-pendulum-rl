@@ -11,7 +11,7 @@ import mujoco
 import numpy as np
 
 from PySide6.QtCore import Qt
-from PySide6.QtGui import QBrush, QColor, QPen, QPixmap
+from PySide6.QtGui import QBrush, QPen, QPixmap
 from PySide6.QtWidgets import (
     QGraphicsEllipseItem,
     QGraphicsItem,
@@ -21,11 +21,7 @@ from PySide6.QtWidgets import (
 
 from .config import PendulumConfig, VisualizationConfig
 from .environment import CartPendulumEnv
-
-
-def _rgb(t: tuple) -> QColor:
-    """Convert an (r, g, b) or (r, g, b, a) tuple to a QColor."""
-    return QColor(*t)
+from .widget_base import _rgb
 
 
 class CartItem(QGraphicsRectItem):
