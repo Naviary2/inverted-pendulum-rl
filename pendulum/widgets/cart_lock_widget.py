@@ -94,11 +94,14 @@ class CartLockWidget(BaseWidget):
 
         locked = self._cart_item.is_locked
 
-        # Amber background overlay when locked
+        # Amber background overlay when locked — inset by half the border width so
+        # the fill sits entirely inside the border stroke and doesn't bleed into it.
         if locked:
+            half_pen = self._border_size_px / 2
+            inner_rect = self._rect.adjusted(half_pen, half_pen, -half_pen, -half_pen)
             painter.setPen(QPen(Qt.PenStyle.NoPen))
             painter.setBrush(QBrush(QColor(*self._BG_COLOR_LOCKED)))
-            painter.drawRoundedRect(self._rect, self._radius_px, self._radius_px)
+            painter.drawRoundedRect(inner_rect, self._radius_px, self._radius_px)
 
         # Hover highlight overlay
         if self._hovered:
@@ -110,7 +113,8 @@ class CartLockWidget(BaseWidget):
         header_font = QFont()
         header_font.setPointSizeF(self._HEADER_FONT_SIZE)
         painter.setFont(header_font)
-        painter.setPen(QPen(self._COL_HEADER))
+        header_color = self._COL_LOCKED if locked else self._COL_HEADER
+        painter.setPen(QPen(header_color))
         painter.drawText(
             QRectF(0.0, self._PAD_TOP, self._SIZE, self._HEADER_H),
             Qt.AlignmentFlag.AlignHCenter | Qt.AlignmentFlag.AlignVCenter,
