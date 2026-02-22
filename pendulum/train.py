@@ -22,7 +22,7 @@ from pathlib import Path
 from stable_baselines3 import PPO
 from stable_baselines3.common.callbacks import BaseCallback, EvalCallback
 from stable_baselines3.common.monitor import Monitor
-from stable_baselines3.common.vec_env import SubprocVecEnv
+from stable_baselines3.common.vec_env import DummyVecEnv, SubprocVecEnv
 
 from .config import PendulumConfig, TrainingConfig
 from .environment import CartPendulumEnv
@@ -144,13 +144,10 @@ def train(
     env_fns = [_make_env(p_cfg, t_cfg.max_episode_steps) for _ in range(t_cfg.n_envs)]
     vec_env = SubprocVecEnv(env_fns)
 
-    # Eval environment (single process) for the EvalCallback
-    eval_env = Monitor(
-        CartPendulumEnv(
-            pendulum_config=p_cfg,
-            max_episode_steps=t_cfg.max_episode_steps,
-        )
-    )
+    # Eval environment (single process) for the EvalCallback.
+    # Wrapped in DummyVecEnv so its type matches the SubprocVecEnv training env
+    # and avoids the "Training and eval env are not of the same type" warning.
+    eval_env = DummyVecEnv([_make_env(p_cfg, t_cfg.max_episode_steps)])
 
     # Ensure save directories exist.
     # All files for one model live under save_dir (e.g. models/ppo_pendulum/).
