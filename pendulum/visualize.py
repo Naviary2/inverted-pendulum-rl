@@ -29,7 +29,7 @@ from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QKeyEvent
 from PySide6.QtWidgets import QApplication, QMainWindow
 
-from .config import PendulumConfig, TrainingConfig, VisualizationConfig
+from .config import PendulumConfig, TrainingConfig, VisualizationConfig, WARMUP_DURATION_SECS
 from .environment import CartPendulumEnv
 from .renderer import PendulumScene, PendulumView
 from .train import BEST_MODEL_FILENAME
@@ -98,8 +98,8 @@ class PendulumWindow(QMainWindow):
         # Initial sync
         self._scene.sync_from_state(env._state)
 
-        # Startup delay: hold physics/interaction for 0.5s after window opens
-        QTimer.singleShot(500, self._end_warmup)
+        # Startup delay: hold physics/interaction for WARMUP_DURATION_SECS after window opens
+        QTimer.singleShot(int(WARMUP_DURATION_SECS * 1000), self._end_warmup)
 
         # Timer at config fps
         self._timer = QTimer(self)
@@ -119,7 +119,7 @@ class PendulumWindow(QMainWindow):
             self.obs, _ = self.env.reset()
             self._warming_up = True
             self._warmup_start = time.perf_counter()
-            QTimer.singleShot(500, self._end_warmup)
+            QTimer.singleShot(int(WARMUP_DURATION_SECS * 1000), self._end_warmup)
         elif event.key() == Qt.Key.Key_G:
             self._scene._cart.toggle_lock()
         elif event.key() == Qt.Key.Key_F:
@@ -143,9 +143,9 @@ class PendulumWindow(QMainWindow):
         self._fps_display = float(len(self._fps_tick_times))
 
         # --- Simulation time in seconds, rounded to nearest 0.1 ---
-        # Negative during warmup (-0.5 → 0.0), non-negative once simulation runs
+        # Negative during warmup (-WARMUP_DURATION_SECS → 0.0), non-negative once simulation runs
         if self._warming_up:
-            sim_time_secs = round((now - self._warmup_start) * 10) / 10 - 0.5
+            sim_time_secs = round((now - self._warmup_start) * 10) / 10 - WARMUP_DURATION_SECS
         else:
             sim_time_secs = round((now - self._sim_start) * 10) / 10
 

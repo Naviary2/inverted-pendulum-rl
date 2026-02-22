@@ -7,6 +7,7 @@ from __future__ import annotations
 from PySide6.QtCore import Qt, QRectF
 from PySide6.QtGui import QColor, QFont, QFontDatabase, QPainter, QPen
 from .widget_base import BaseWidget
+from ..config import WARMUP_DURATION_SECS
 
 
 class StatusWidget(BaseWidget):
@@ -58,7 +59,7 @@ class StatusWidget(BaseWidget):
     def __init__(self, parent=None):
         rect = QRectF(0.0, 0.0, self._W, self._H)
         super().__init__(rect, self._THEME_COLOR, parent)
-        self._sim_time_secs: float = -0.5
+        self._sim_time_secs: float = -WARMUP_DURATION_SECS
         self._fps: float = 0.0
         self._physics_hz: int = 0
         self._agent_active: bool = False

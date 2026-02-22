@@ -6,6 +6,10 @@ import multiprocessing
 from dataclasses import dataclass, field
 from typing import List
 
+# Warmup duration: physics and interaction are held for this many seconds
+# after the window opens (or after pressing R to reset).
+WARMUP_DURATION_SECS: float = 1.0
+
 
 @dataclass
 class PendulumConfig:
