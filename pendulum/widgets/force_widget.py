@@ -7,6 +7,7 @@ from __future__ import annotations
 import math
 import time
 from collections import deque
+from typing import NamedTuple
 
 from PySide6.QtCore import Qt, QLineF, QRectF
 from PySide6.QtGui import (
@@ -27,23 +28,32 @@ from .widget_base import BaseWidget
 _GREY = (150, 150, 150)
 
 
+class _Entry(NamedTuple):
+    """One recorded force sample."""
+    perf_time: float   # time.perf_counter() value when the sample was taken
+    sim_time: float    # exact (unrounded) simulation time in seconds
+    force: float       # Newtons applied to the cart
+
+
 class ForceWidget(BaseWidget):
     """Scrolling line graph showing the force applied to the cart each frame.
 
+    History is stored as ``(perf_time, sim_time, force)`` triples so that
+    gridlines are always exactly aligned with the data points at every paint
+    call — no epoch extrapolation errors across the warmup/post-warmup boundary.
+
     Layout (top → bottom):
     ┌──────────────────────┐  ← teal themed border
-    │ Force (Newtons)  +42 │  ← title (white), current force (white monospace)
+    │ Force (Newtons)   42 │  ← title (white), current force (white monospace)
     │  -200      0    +200 │  ← fixed x-axis labels (grey); expand when force > max
-    │      │               │  ← graph: now at top, 2 s ago at bottom
-    │      │╲  ----0.0s    │      scrolling grey gridlines + labels
-    │      │ ╲___          │      center vertical line (grey)
-    │      │     ╲  -0.5s  │      teal force line + shaded fill
+    │      │               │  ← graph: now at top, 2.5 s ago at bottom
+    │  0.0s │╲             │      left-aligned grey gridline labels
+    │       │ ╲___         │      grey center vertical line
+    │ -0.5s │     ╲        │      teal force line + shaded fill
     └──────────────────────┘
 
     Call ``update_force(force_newton, sim_time_exact)`` each tick; history older
     than ``_HISTORY_SECS`` is pruned automatically.  Call ``reset()`` on reset.
-    ``sim_time_exact`` must be the unrounded wall-clock simulation time (negative
-    during warmup) so gridlines scroll with no stairstepping or discontinuity.
     """
 
     _THEME_COLOR: tuple = (60, 200, 170)   # teal accent
@@ -60,7 +70,7 @@ class ForceWidget(BaseWidget):
     _PAD_TITLE_TOP: float = 4.0   # top padding inside the title row
 
     # Graph time window
-    _HISTORY_SECS: float = 2.0
+    _HISTORY_SECS: float = 2.5
     _GRID_INTERVAL_SECS: float = 0.5   # one horizontal gridline per this many seconds
 
     # Typography
@@ -99,14 +109,10 @@ class ForceWidget(BaseWidget):
         super().__init__(rect, self._THEME_COLOR, parent)
 
         self._max_force: float = max(max_force, self._MIN_FORCE)
-        self._force_history: deque[tuple[float, float]] = deque()
+        # Each entry records the exact perf and sim time alongside the force so
+        # that paint() can anchor gridlines to the data without any separate epoch.
+        self._force_history: deque[_Entry] = deque()
         self._current_force: float = 0.0
-
-        # Sim-clock reference pair updated on every update_force call.
-        # Storing the exact (unrounded) sim time lets paint() extrapolate
-        # sim_now continuously between ticks with no stairstepping.
-        self._last_sim_time: float = 0.0
-        self._last_perf_time: float | None = None   # None until first update_force
 
     # ------------------------------------------------------------------
     # Public API
@@ -115,19 +121,19 @@ class ForceWidget(BaseWidget):
     def update_force(self, force_newton: float, sim_time_exact: float) -> None:
         """Append a new force reading and schedule a repaint.
 
-        ``sim_time_exact`` must be the unrounded simulation time (seconds):
-        negative during warmup, non-negative after warmup starts.
-        Readings older than ``_HISTORY_SECS`` are automatically pruned.
+        ``sim_time_exact`` is the continuous (unrounded) simulation time in
+        seconds — negative during warmup, non-negative after warmup starts.
+        Storing it alongside the perf-counter time means ``paint()`` can
+        always derive ``sim_now`` from the data itself, so gridlines are
+        locked to the force history at every paint call.
         """
         now = time.perf_counter()
-        self._force_history.append((now, force_newton))
+        self._force_history.append(_Entry(now, sim_time_exact, force_newton))
         self._current_force = force_newton
-        # Always sync: sim_time_exact is continuous so we never stairStep.
-        self._last_sim_time = sim_time_exact
-        self._last_perf_time = now
 
-        cutoff = now - self._HISTORY_SECS
-        while self._force_history and self._force_history[0][0] < cutoff:
+        # Prune points outside the visible window (sim-time based).
+        sim_cutoff = sim_time_exact - self._HISTORY_SECS
+        while self._force_history and self._force_history[0].sim_time < sim_cutoff:
             self._force_history.popleft()
 
         self.update()
@@ -136,7 +142,6 @@ class ForceWidget(BaseWidget):
         """Clear the force history (call when the simulation resets)."""
         self._force_history.clear()
         self._current_force = 0.0
-        self._last_perf_time = None   # re-sync on next update_force call
         self.update()
 
     # ------------------------------------------------------------------
@@ -164,17 +169,22 @@ class ForceWidget(BaseWidget):
         graph_left = pad_x
         graph_right = w - pad_x
 
-        # Extrapolate the current simulation time from the last call reference.
-        if self._last_perf_time is not None:
-            sim_now = self._last_sim_time + (now - self._last_perf_time)
+        # Snapshot history once so the whole paint call is consistent.
+        history = list(self._force_history)  # [(perf_t, sim_t, force), ...]
+
+        # Derive sim_now by extrapolating from the most recent data point.
+        # This guarantees gridlines are always aligned with the data — no
+        # warmup/post-warmup epoch discontinuity possible.
+        if history:
+            latest = history[-1]
+            sim_now = latest.sim_time + (now - latest.perf_time)
         else:
             sim_now = 0.0
 
         # Dynamic X-axis scale: expand if any history point exceeds max_force.
-        history = list(self._force_history)
         x_scale = self._max_force
         if history:
-            max_abs = max(abs(f) for _, f in history)
+            max_abs = max(abs(e.force) for e in history)
             if max_abs > x_scale:
                 x_scale = max_abs
 
@@ -186,7 +196,9 @@ class ForceWidget(BaseWidget):
         force_font.setPointSizeF(self._FORCE_FONT_SIZE)
         force_font.setBold(True)
 
-        force_text = f"{self._current_force:+.0f}"
+        # Show "0" (not "+0" or "-0") when the rounded value is zero.
+        raw_text = f"{self._current_force:+.0f}"
+        force_text = "0" if raw_text in ("+0", "-0") else raw_text
 
         force_text_w = QFontMetricsF(force_font).horizontalAdvance(force_text) + self._FORCE_TEXT_PADDING
         title_col_w = inner_w - force_text_w
@@ -237,7 +249,7 @@ class ForceWidget(BaseWidget):
         painter.setPen(QPen(QColor(gr, gg, gb, self._CENTER_LINE_ALPHA), 1.0))
         painter.drawLine(QLineF(center_x, graph_top, center_x, graph_bot))
 
-        # ── 4. Scrolling horizontal gridlines with time labels (grey) ─
+        # ── 4. Scrolling horizontal gridlines with time labels (grey, left-aligned) ─
         grid_font = QFont()
         grid_font.setPointSizeF(self._GRID_LABEL_FONT_SIZE)
 
@@ -250,8 +262,11 @@ class ForceWidget(BaseWidget):
 
         for idx in range(idx_start, idx_end + 1):
             t = idx * step
-            age = sim_now - t   # seconds ago (positive = in the past, negative = in the future)
-            y = graph_top + (age / self._HISTORY_SECS) * graph_h
+            # delta_t = how far this gridline's sim-time is behind sim_now.
+            # Positive → gridline is in the past (lower on screen).
+            # Negative → gridline is ahead of the current instant (above graph_top, clipped).
+            delta_t = sim_now - t
+            y = graph_top + (delta_t / self._HISTORY_SECS) * graph_h
             if graph_top <= y <= graph_bot:
                 painter.setPen(QPen(QColor(gr, gg, gb, self._GRID_ALPHA), 1.0))
                 painter.drawLine(QLineF(graph_left, y, graph_right, y))
@@ -260,7 +275,7 @@ class ForceWidget(BaseWidget):
                 painter.setPen(QPen(QColor(gr, gg, gb, self._GRID_LABEL_ALPHA)))
                 painter.drawText(
                     QRectF(graph_left, y + 1.0, inner_w, self._GRID_LABEL_H),
-                    Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignTop,
+                    Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop,
                     label,
                 )
 
@@ -270,19 +285,21 @@ class ForceWidget(BaseWidget):
         if not history:
             return
 
-        def t_to_y(ts: float) -> float:
-            return graph_top + ((now - ts) / self._HISTORY_SECS) * graph_h
+        def st_to_y(sim_t: float) -> float:
+            """Map a sim_time to a vertical pixel coordinate."""
+            age = sim_now - sim_t
+            return graph_top + (age / self._HISTORY_SECS) * graph_h
 
         def f_to_x(f: float) -> float:
             return center_x + (f / x_scale) * half_graph_w
 
         # Collect visible points (most-recent first).
         points: list[tuple[float, float]] = []
-        for ts, f in reversed(history):
-            y = t_to_y(ts)
+        for entry in reversed(history):
+            y = st_to_y(entry.sim_time)
             if y > graph_bot:
                 break
-            points.append((f_to_x(f), y))
+            points.append((f_to_x(entry.force), y))
 
         if not points:
             return
