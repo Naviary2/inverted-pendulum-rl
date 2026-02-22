@@ -28,26 +28,31 @@ class PendulumWidget(BaseWidget):
 
     Geometry is derived from the physics and visualisation configs; the only
     styling parameter is ``theme_color``, inherited from ``BaseWidget``.
+
+    Padding around the track content is owned by this widget as constants;
+    the base class receives only the final dimensions.
     """
 
+    # Padding around the track content, in metres (constant for this widget type)
+    _PADDING_X: float = 1.0   # m  left / right padding
+    _PADDING_Y: float = 0.25  # m  top / bottom padding
+
     def __init__(self, p_cfg, v, parent=None):
-        # Widget half-width: half the physics track + cart-body margin + h-padding
+        # Base content half-width: half the physics track + cart-body visual margin
         # The margin uses 0.8 × cart_body_width because the full track visual width
         # adds 1.6 × body_w (one full body width split equally on each side).
-        half_w = (
-            p_cfg.track_length / 2
-            + v.cart_body_width * 0.8
-            + v.widget_padding_x
-        ) * v.scale
+        base_half_w = (p_cfg.track_length / 2 + v.cart_body_width * 0.8) * v.scale
 
-        # Widget top edge: total pendulum height above cart + node width + v-padding
-        total_link_len = sum(p_cfg.link_lengths) + p_cfg.node_radius
-        top = -(total_link_len + v.widget_padding_y) * v.scale
+        # Base content half-height: total pendulum height above/below cart + node radius
+        base_half_h = (sum(p_cfg.link_lengths) + p_cfg.node_radius) * v.scale
 
-        # Widget bottom edge: total pendulum height below cart + node width + v-padding
-        bottom = -top
+        # Full widget dimensions = base content + padding
+        padding_x_px = self._PADDING_X * v.scale
+        padding_y_px = self._PADDING_Y * v.scale
+        half_w = base_half_w + padding_x_px
+        half_h = base_half_h + padding_y_px
 
-        rect = QRectF(-half_w, top, 2 * half_w, bottom - top)
+        rect = QRectF(-half_w, -half_h, 2 * half_w, 2 * half_h)
         super().__init__(rect, v.widget_theme_color, v.scale, parent)
 
 

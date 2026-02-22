@@ -89,8 +89,6 @@ class VisualizationConfig:
     force_circle_color: tuple = (255, 0, 0)  # red
 
     # Simulation widget (rounded-rect container for track / cart / pendulums)
-    widget_padding_x: float = 1.0      # m  horizontal padding (left / right)
-    widget_padding_y: float = 0.25     # m  vertical padding (top / bottom)
     widget_theme_color: tuple = (70, 140, 255)  # blue accent color
     # widget_theme_color: tuple = (50, 160, 30)  # green
 
