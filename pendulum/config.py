@@ -29,7 +29,6 @@ class PendulumConfig:
 
     # Physics
     gravity: float = 9.81            # m/s² ~8 Looks normal
-    force_limit: float = 8.0        # N  (max force applied to cart)
 
     # Collision geometry
     node_radius: float = 0.13      # m  (tip node sphere radius)

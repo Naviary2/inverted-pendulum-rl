@@ -19,7 +19,7 @@ from PySide6.QtWidgets import (
 from .config import PendulumConfig, VisualizationConfig
 from .environment import CartPendulumEnv
 from .interaction import CartItem, ForceCircleItem
-from .widgets import CartLockWidget, PendulumWidget, StatusWidget, TickRulerItem, _rgb
+from .widgets import ForceWidget, CartLockWidget, PendulumWidget, StatusWidget, TickRulerItem, _rgb
 
 
 class PendulumScene(QGraphicsScene):
@@ -41,6 +41,13 @@ class PendulumScene(QGraphicsScene):
         # --- Simulation widget (rounded-rect container) ---
         self._widget = PendulumWidget(p_cfg, v)
         self.addItem(self._widget)
+
+        # The ForceWidget always sits to the left, so the pendulum widget is
+        # shifted right to make visual room.
+        _agent_w = ForceWidget._W
+        _agent_gap = 24.0                      # px gap between the two widgets
+        _pendulum_offset_x = (_agent_w + _agent_gap) / 2.0
+        self._widget.setPos(_pendulum_offset_x, 0)
 
         # --- Track (child of widget) ---
         # Width: physics track length + one full cart body width for visual margin
@@ -103,7 +110,7 @@ class PendulumScene(QGraphicsScene):
         )
         self.addItem(self._status_widget)
 
-        # --- Cart lock widget (centred X, below pendulum widget) ---
+        # --- Cart lock widget (centred on the full screen, below the pendulum widget) ---
         lock_gap_px = 70.0
         pw_bottom = self._widget.rect.bottom()    # y of pendulum widget's bottom edge in scene
         lock_size = CartLockWidget._SIZE
@@ -111,8 +118,16 @@ class PendulumScene(QGraphicsScene):
         self._cart_lock_widget.setPos(-lock_size / 2, pw_bottom + lock_gap_px)
         self.addItem(self._cart_lock_widget)
 
+        # --- Force widget (always visible, left of the pendulum widget, vertically centred) ---
+        pw_height = self._widget.rect.height()
+        force_widget_x = _pendulum_offset_x + self._widget.rect.left() - _agent_gap - _agent_w
+        force_widget_y = -pw_height / 2.0
+        self._force_widget = ForceWidget(p_cfg.force_magnitude, height=pw_height)
+        self._force_widget.setPos(force_widget_x, force_widget_y)
+        self.addItem(self._force_widget)
+
         # --- Force circle (top-level scene item, renders above all widgets) ---
-        self._force_circle = ForceCircleItem(env, p_cfg, v)
+        self._force_circle = ForceCircleItem(env, p_cfg, v, scene_offset_x=_pendulum_offset_x)
         self.addItem(self._force_circle)
 
     # ---------------------------------------------------------------
@@ -130,6 +145,14 @@ class PendulumScene(QGraphicsScene):
     def update_cart_lock(self) -> None:
         """Refresh the cart lock widget (call after toggling lock state)."""
         self._cart_lock_widget.refresh()
+
+    def update_force_widget(self, force_newton: float, sim_time_secs: float) -> None:
+        """Push a new force reading (Newtons) to the Force widget."""
+        self._force_widget.update_force(force_newton, sim_time_secs)
+
+    def reset_force_widget(self) -> None:
+        """Clear the Force widget history (call on simulation reset)."""
+        self._force_widget.reset()
 
     def sync_from_state(self, state: np.ndarray):
         """Update item positions from MuJoCo state ``[x, θ, ẋ, θ̇]``."""

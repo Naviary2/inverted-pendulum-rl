@@ -119,6 +119,7 @@ class PendulumWindow(QMainWindow):
             self.obs, _ = self.env.reset()
             self._warming_up = True
             self._warmup_start = time.perf_counter()
+            self._scene.reset_force_widget()
             QTimer.singleShot(int(WARMUP_DURATION_SECS * 1000), self._end_warmup)
         elif event.key() == Qt.Key.Key_G:
             self._scene._cart.toggle_lock()
@@ -143,12 +144,15 @@ class PendulumWindow(QMainWindow):
             self._fps_tick_times.popleft()
         self._fps_display = float(len(self._fps_tick_times))
 
-        # --- Simulation time in seconds, rounded to nearest 0.1 ---
-        # Negative during warmup (-WARMUP_DURATION_SECS → 0.0), non-negative once simulation runs
+        # --- Simulation time ---
+        # Rounded (0.1 s steps) for the status widget display.
+        # Exact (continuous) for the ForceWidget gridlines — avoids stairstepping.
         if self._warming_up:
             sim_time_secs = round((now - self._warmup_start) * 10) / 10 - WARMUP_DURATION_SECS
+            sim_time_exact = ((now - self._warmup_start) - WARMUP_DURATION_SECS)
         else:
             sim_time_secs = round((now - self._sim_start) * 10) / 10
+            sim_time_exact = now - self._sim_start
 
         # --- Update HUD ---
         physics_hz = self.p_cfg.fps * self.p_cfg.physics_substeps
@@ -159,6 +163,7 @@ class PendulumWindow(QMainWindow):
             self.model is not None,
         )
 
+        force_newton = 0.0  # zero during warmup; computed below when simulation is running
         if not self._warming_up:
             cart = self._scene._cart
 
@@ -176,8 +181,19 @@ class PendulumWindow(QMainWindow):
 
             self.obs, _reward, terminated, truncated, _ = self.env.step(action)
 
+            if cart.is_dragging or cart.is_locked:
+                # Read MuJoCo constraint force on the cart's x-axis DOF in Newtons.
+                # Not clamped — x-axis auto-scales in ForceWidget if this exceeds max_force.
+                raw = self.env._mujoco_env.unwrapped.data.qfrc_constraint[0]
+                force_newton = float(raw)
+            else:
+                force_newton = float(action[0]) * self.p_cfg.force_magnitude
+
             if (terminated or truncated) and not cart.is_dragging and not cart.is_locked:
                 self.obs, _ = self.env.reset()
+
+        # Update force widget every tick (force = 0 during warmup).
+        self._scene.update_force_widget(force_newton, sim_time_exact)
 
         self._scene.sync_from_state(self.env._state)
 

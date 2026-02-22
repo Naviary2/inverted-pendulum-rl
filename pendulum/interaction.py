@@ -226,7 +226,10 @@ class CartItem(QGraphicsRectItem):
             self.is_dragging = True
             # Move the mocap to the cursor position immediately so that the cart snaps to the cursor when you click.
             scene_pos = event.scenePos()
-            target_x = scene_pos.x() / self.v.scale
+            # Subtract the parent widget's scene x so the physics origin (x=0) stays
+            # at the widget centre even when the widget has been shifted in the scene.
+            parent_scene_x = self.parentItem().scenePos().x() if self.parentItem() else 0.0
+            target_x = (scene_pos.x() - parent_scene_x) / self.v.scale
             half_track = self.p_cfg.track_length / 2.0
             target_x = float(np.clip(target_x, -half_track, half_track))
             self._mujoco_data.mocap_pos[0, 0] = target_x
@@ -240,7 +243,8 @@ class CartItem(QGraphicsRectItem):
     def mouseMoveEvent(self, event):
         if self.is_dragging:
             scene_pos = event.scenePos()
-            target_x = scene_pos.x() / self.v.scale
+            parent_scene_x = self.parentItem().scenePos().x() if self.parentItem() else 0.0
+            target_x = (scene_pos.x() - parent_scene_x) / self.v.scale
             half_track = self.p_cfg.track_length / 2.0
             target_x = float(np.clip(target_x, -half_track, half_track))
             self._mujoco_data.mocap_pos[0, 0] = target_x
@@ -277,6 +281,7 @@ class ForceCircleItem(QGraphicsEllipseItem):
         env: CartPendulumEnv,
         p_cfg: PendulumConfig,
         v: VisualizationConfig,
+        scene_offset_x: float = 0.0,
         parent=None,
     ):
         radius_px = p_cfg.force_circle_radius * v.scale
@@ -286,6 +291,7 @@ class ForceCircleItem(QGraphicsEllipseItem):
         self.p_cfg = p_cfg
         self.v = v
         self.is_active = False
+        self._scene_offset_x: float = scene_offset_x
 
         # MuJoCo mocap handle
         mujoco_model = env._mujoco_env.unwrapped.model
@@ -308,7 +314,7 @@ class ForceCircleItem(QGraphicsEllipseItem):
         if not self.is_active:
             return
         self.setPos(scene_x, scene_y)
-        world_x = scene_x / self.v.scale
+        world_x = (scene_x - self._scene_offset_x) / self.v.scale
         world_z = -scene_y / self.v.scale  # scene Y down → MuJoCo Z up
         self._mujoco_data.mocap_pos[self._mocap_index, 0] = world_x
         self._mujoco_data.mocap_pos[self._mocap_index, 2] = world_z
