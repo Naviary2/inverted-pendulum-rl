@@ -61,7 +61,6 @@ class VisualizationConfig:
 
     width: int = 1920
     height: int = 1080
-    fps: int = 60
     scale: float = 200.0 # pixels per metre
 
     track_h: float = 0.09 # m  (track height)

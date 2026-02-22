@@ -19,6 +19,8 @@ from __future__ import annotations
 import argparse
 import signal
 import sys
+import time
+from collections import deque
 from pathlib import Path
 
 import numpy as np
@@ -77,6 +79,11 @@ class PendulumWindow(QMainWindow):
         self.p_cfg = p_cfg
         self.v = v
         self._warming_up = True
+        self._warmup_start: float = time.perf_counter()
+        self._sim_start: float = 0.0  # set properly by _end_warmup()
+        # FPS: count actual tick calls in the last second
+        self._fps_tick_times: deque[float] = deque()
+        self._fps_display: float = 0.0
 
         self.setWindowTitle("Inverted Pendulum")
         self.setFixedSize(v.width, v.height)
@@ -103,6 +110,7 @@ class PendulumWindow(QMainWindow):
 
     def _end_warmup(self):
         self._warming_up = False
+        self._sim_start = time.perf_counter()
 
     # -- key handling -------------------------------------------------------
 
@@ -110,6 +118,7 @@ class PendulumWindow(QMainWindow):
         if event.key() == Qt.Key.Key_R:
             self.obs, _ = self.env.reset()
             self._warming_up = True
+            self._warmup_start = time.perf_counter()
             QTimer.singleShot(500, self._end_warmup)
         elif event.key() == Qt.Key.Key_G:
             self._scene._cart.toggle_lock()
@@ -124,6 +133,31 @@ class PendulumWindow(QMainWindow):
     # -- simulation tick ----------------------------------------------------
 
     def _tick(self):
+        now = time.perf_counter()
+
+        # --- FPS: count actual tick calls in the last 1-second window ---
+        self._fps_tick_times.append(now)
+        cutoff = now - 1.0
+        while self._fps_tick_times and self._fps_tick_times[0] < cutoff:
+            self._fps_tick_times.popleft()
+        self._fps_display = float(len(self._fps_tick_times))
+
+        # --- Simulation time in seconds, rounded to nearest 0.1 ---
+        # Negative during warmup (-0.5 → 0.0), non-negative once simulation runs
+        if self._warming_up:
+            sim_time_secs = round((now - self._warmup_start) * 10) / 10 - 0.5
+        else:
+            sim_time_secs = round((now - self._sim_start) * 10) / 10
+
+        # --- Update HUD ---
+        physics_hz = self.p_cfg.fps * self.p_cfg.physics_substeps
+        self._scene.update_status(
+            sim_time_secs,
+            self._fps_display,
+            physics_hz,
+            self.model is not None,
+        )
+
         if not self._warming_up:
             cart = self._scene._cart
 
