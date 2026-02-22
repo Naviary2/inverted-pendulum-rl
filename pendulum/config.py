@@ -63,6 +63,8 @@ class TrainingConfig:
 class VisualizationConfig:
     """Display settings for the Qt viewer."""
 
+    bg_color: tuple = (60, 60, 60) # grey
+
     width: int = 1920
     height: int = 1080
     scale: float = 200.0 # pixels per metre
@@ -84,7 +86,6 @@ class VisualizationConfig:
     node_outline_width: float = 0.022 # m
 
     pendulum_width: float = 0.045 # m
-    bg_color: tuple = (60, 60, 60) # grey
     fg_color: tuple = (255, 255, 255) # white
 
     # Force circle (toggled with "F" key)
